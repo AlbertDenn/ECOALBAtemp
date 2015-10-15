@@ -45,7 +45,6 @@ while(q.hasResult() && q.next())
 	c.nombre=q.getValue(1);
 	c.rif=q.getValue(0);
 	uecon.insert(c);
-
 	}
 q.clear();
 

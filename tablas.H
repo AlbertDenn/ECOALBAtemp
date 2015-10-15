@@ -2,7 +2,6 @@
 # include <autosprintf.h>
 
 # include <fstream>
-//# include <parse-csv.H>
 
 # include <tpl_dynSetHash.H>
 # include <tpl_dynMapTree.H>
@@ -37,6 +36,7 @@ struct CmpEqualId
 template <class T>
 size_t hash_id(const T & i) { return SuperFastHash(i.id); }
 
+/* NOT USING IT RIGHT NOW
 struct Socio
 {
   string rif;
@@ -191,6 +191,8 @@ struct TablaMetaSocios : public DynArray<Socio>
     return bsearch(*this, Socio(rif), Socio::CmpLess());
   }  
 };
+
+*/
 
 struct UnidadEconomica
 {
