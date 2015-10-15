@@ -4,7 +4,7 @@ DB = /home/cenditel/ECOALBA/testGood/DB
 PQ = /usr/include/postgresql
 
 
-CXX = /usr/bin/clang++-3.6
+CXX = /usr/bin/clang++-3.7
 
 
 OPTIMIZATION = -O0

@@ -8,7 +8,7 @@ TEST DE USO DE DATOS DE BIENES Y COMPAÑIAS
 #include <iostream>
 #include <dbQuery.H>
 #include <string>
-#include <tpl_dlist.H>
+#include <tpl_dynDlist.H>
 #include <tpl_dnode.H>
 
 typedef struct {
@@ -27,7 +27,7 @@ DBQuery q(conection);
 conection.open("file.txt");
 std::string query;
 
-Aleph::Dlist <Company> uecon;
+Aleph::DynDlist <Company> uecon;
 
 
 
@@ -44,10 +44,8 @@ while(q.hasResult() && q.next())
 	Company c;
 	c.nombre=q.getValue(1);
 	c.rif=q.getValue(0);
-	
-	Aleph::Dnode<Company> *d= new Aleph::Dnode<Company> (c);
+	uecon.insert(c);
 
-	uecon.insert(d);
 	}
 q.clear();
 
