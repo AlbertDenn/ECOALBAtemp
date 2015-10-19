@@ -2,6 +2,7 @@
 # include <autosprintf.h>
 
 # include <fstream>
+# include <parse-csv.H>
 
 # include <tpl_dynSetHash.H>
 # include <tpl_dynMapTree.H>
@@ -36,7 +37,7 @@ struct CmpEqualId
 template <class T>
 size_t hash_id(const T & i) { return SuperFastHash(i.id); }
 
-/* NOT USING IT RIGHT NOW
+
 struct Socio
 {
   string rif;
@@ -111,7 +112,7 @@ struct TablaSocios : public DynSetTree<Socio, Avl_Tree, Socio::CmpLess>
     if (in.fail()) 
       throw std::domain_error(fmt("No se pudo abrir %s", name));
 
-    if (::verbose)
+    
       cout << "Reading socios ..." << endl;
 
     size_t empty_counter = 0;
@@ -136,7 +137,7 @@ struct TablaSocios : public DynSetTree<Socio, Avl_Tree, Socio::CmpLess>
 	auto s = search_or_insert(Socio(rif_pasaporte, row(4), nac));
 	s->empresas.append(make_pair(unidad_economica_rif, stof(row(7))));
       }
-    if (::verbose)
+    
       cout << "done!" << endl
 	   << endl;
   }
@@ -192,7 +193,6 @@ struct TablaMetaSocios : public DynArray<Socio>
   }  
 };
 
-*/
 
 struct UnidadEconomica
 {
@@ -235,11 +235,13 @@ struct TablaUnidadesEconomicas
     if (in.fail()) 
       throw std::domain_error(fmt("No se pudo abrir %s", name));
 
-    if (::verbose)
+
       cout << "Reading economical unities ..." << endl;
 
     auto header = csv_read_row(in, ','); 
     const size_t n = header.size();
+
+
     for (size_t i = 0; in.good(); ++i)
       {
 	auto row = csv_read_row(in, ',');
@@ -248,7 +250,6 @@ struct TablaUnidadesEconomicas
 				 row.size(), n));
 	emplace(row(0), row(2));
       }
-    if (::verbose)
       cout << "done!" << endl
 	   << endl;
   }
@@ -299,7 +300,6 @@ struct TablaPlantas : public HashType<Planta, Planta::CmpEqual>
     if (in.fail()) 
       throw std::domain_error(fmt("No se pudo abrir %s", name));
 
-    if (::verbose)
       cout << "Reading subeconomical unities" << endl;
 
     auto header = csv_read_row(in, ','); 
@@ -312,7 +312,7 @@ struct TablaPlantas : public HashType<Planta, Planta::CmpEqual>
 				 row.size(), n));
 	emplace(atol(row(0).c_str()), row(1), row(2));
       }
-    if (::verbose)
+
       cout << "Done! " << endl
 	   << endl;
   }
@@ -383,8 +383,7 @@ struct TablaP : public HashType<Producto, Producto::CmpEqual>
     if (in.fail()) 
       throw std::domain_error(fmt("No se pudo abrir %s", name));
 
-    if (::verbose)
-      cout << "Reading " << name << endl;
+    cout << "Reading " << name << endl;
 
     auto header = csv_read_row(in, ','); 
     const size_t n = header.size();
@@ -396,7 +395,7 @@ struct TablaP : public HashType<Producto, Producto::CmpEqual>
 				 row.size(), n));
 	emplace(atol(row(0).c_str()), row(1), row(3), atol(row(4).c_str()));
       }
-    if (::verbose)
+    
       cout << "Done!" << endl
 	   << endl;
   }
@@ -407,7 +406,7 @@ struct TablaP : public HashType<Producto, Producto::CmpEqual>
     if (in.fail()) 
       throw std::domain_error(fmt("No se pudo abrir %s", costs_name));
 
-    if (::verbose)
+    
       cout << "Loading " << costs_name << endl;
 
     auto header = csv_read_row(in, ','); 
@@ -429,7 +428,7 @@ struct TablaP : public HashType<Producto, Producto::CmpEqual>
 	  
 	emplace(atol(row(0).c_str()), row(1), row(3), atol(row(4).c_str()));
       }
-    if (::verbose)
+    
       cout << "Done!" << endl
 	   << endl;
   }
@@ -452,14 +451,14 @@ struct TablaProductos : public TablaP
   TablaProductos(const char * prod_name) 
     : TablaP(prod_name), cmp(Producto::CmpLessCodAran())
   {
-    if (::verbose)
+    
       cout << "    Building index for " << prod_name << endl;
     index.reserve(size());
     size_t i = 0;
     mutable_for_each([this, &i] (auto & p) { index(i++) = &p; });
     in_place_sort(index, [] (auto p1, auto p2)
 		  { return p1->cod_aran < p2->cod_aran; });
-    if (::verbose)
+    
       cout << "    done!" << endl
 	   << endl;
   }
@@ -518,7 +517,7 @@ struct TablaProveedorInsumo : public DynArray<ProveedorInsumo>
     if (in.fail()) 
       throw std::domain_error(fmt("No se pudo abrir %s", name));
 
-    if (::verbose)
+
       cout << "Reading " << name << " for " << anho << endl;
 
     auto header = csv_read_row(in, ','); 
@@ -543,7 +542,7 @@ struct TablaProveedorInsumo : public DynArray<ProveedorInsumo>
     for (size_t i = 0; not heap.is_empty(); ++i)
       this->access(i) = heap.getMin();
 
-    if (::verbose)
+
       cout << "Done!" << endl
 	   << endl;
   }
@@ -601,7 +600,7 @@ struct TablaProveedores : public HashType<Proveedor, CmpEqualId<Proveedor>>
     if (in.fail()) 
       throw std::domain_error(fmt("No se pudo abrir %s", name));
 
-    if (::verbose)
+
       cout << "Reading " << name << endl;
     auto header = csv_read_row(in, ','); 
     const size_t n = header.size();
@@ -614,11 +613,11 @@ struct TablaProveedores : public HashType<Proveedor, CmpEqualId<Proveedor>>
 
 	auto nac = row(5);
 	if (nac != "V" and nac != "E")
-	  throw domain_error(fmt("Tabla prov: nacion inválida en fila %ld", i));
+	  throw domain_error(fmt("Tabla prov: nacion invalida en fila %ld", i));
 	emplace(atol(row(0).c_str()), row(1), row(2), atol(row(3).c_str()), 
 		atol(row(4).c_str()), nac, atol(row(6).c_str()));
       }
-    if (::verbose)
+
       cout << "Done! " << endl
 	   << endl;
   }

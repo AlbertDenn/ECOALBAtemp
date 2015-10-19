@@ -355,14 +355,14 @@ public:
     if (in.fail()) 
       throw std::domain_error(fmt("No se pudo abrir %s", name));
 
-    if (::verbose)
+    
       cout << "Reading arcs ..." << endl;
 
     auto header = csv_read_row(in, ','); 
     const size_t n = header.size();
     for (size_t i = 0; in.good(); ++i)
       {
-	if (::verbose and i % verbose_cycles == 0)
+	
 	  cout << "    i = " << i << endl;
 	auto row = csv_read_row(in, ',');
 	if (row.size() != n)
@@ -432,10 +432,10 @@ public:
 
   void save(ostream & out)
   {
-    if (::verbose) 
+
       cout << "Saving graph" << endl;
     IO_Graph<Grafo, Carga_Nodo, Guarda_Nodo>(g).save_in_text_mode(out);
-    if (::verbose)
+
       cout << "done!" << endl
 	   << endl;
   }
