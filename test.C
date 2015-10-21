@@ -50,8 +50,9 @@ int main(int argc, char *argv[])
 				std::cout<<it1.get_curr().nombre<<std::endl<<"Estado:"<<it1.get_curr().estado<<std::endl<<std::endl;
 			
 		}
-
 	
+
+
 	
 	
 

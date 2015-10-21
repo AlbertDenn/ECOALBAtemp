@@ -40,8 +40,11 @@ class Fetch{
 	void unidades_economicas(std::string);
 	void subUnidadesEconomicas(std::string);
 	void produccion_producto(std::string,std::string);
+	void produccion_producto(std::string,std::string,std::string);
+	void produccion_insumo(std::string,std::string,std::string);
 	void produccion_insumo(std::string,std::string);
 	void proveedor(std::string);
+	void proveedor(std::string, std::string);
 	UnidadEconomica get_unidadEconomica();
 	DynDlist<SubUnidadE> get_subunidades();
 	DynDlist<Productos> get_productos();
@@ -51,12 +54,6 @@ class Fetch{
 
 	};
 
-
-/*UnidadEconomica Fetch::get_unidadEconomica() {return uEconomica;}
-DynDlist<SubUnidadE> Fetch::get_subunidades() {return subUEconomicas;}
-DynDlist<Productos> Fetch::get_productos(){return produccionProductos;}
-DynDlist<Proveedores> Fetch::get_proveedores(){return proveedores;}
-*/
 
 Fetch::Fetch() {
 
@@ -74,31 +71,14 @@ NodoProductivo Fetch::search(std::string rif, std::string anho)
 {
 	std::locale loc;
    	rif[0]=std::toupper(rif[0],loc);
+	std::string val;
 
 	if(rif[0]=='j'||rif[0]=='J')
 	{
 		unidades_economicas(rif);
 		subUnidadesEconomicas(rif);
-	}
-		
-	else
-	{
-		q->clear();
-		query=(std::string)"SELECT unidadecon_subunidad_economica.ue_rif FROM unidadecon_subunidad_economica, produccion_producto WHERE produccion_producto.codigo_aran_id="+"\'"+rif+"\'";
-		q->exec(query);
-		q->reset();
 
-
-		if(q->hasResult())
-			while(q->hasResult() && q->next())
-				{
-				unidades_economicas(q->getValue(0));
-				subUnidadesEconomicas(q->getValue(0));
-				}
-	}
-
-
-	for(DynDlist<SubUnidadE>::Iterator it(subUEconomicas);it.has_curr();it.next())
+		for(DynDlist<SubUnidadE>::Iterator it(subUEconomicas);it.has_curr();it.next())
 		{
 		produccion_producto(it.get_curr().id,anho);
 		produccion_insumo(it.get_curr().id,anho);
@@ -106,6 +86,37 @@ NodoProductivo Fetch::search(std::string rif, std::string anho)
 		it.get_curr().proveedores= proveedores;
 		proveedores.empty();
 		}
+
+	}
+		
+	else
+	{
+	
+	q->clear();
+	query=(std::string)"SELECT DISTINCT unidadecon_subunidad_economica.ue_rif, produccion_producto.nombre FROM unidadecon_subunidad_economica, produccion_producto WHERE unidadecon_subunidad_economica.tipo_subunidad='Pl' AND produccion_producto.codigo_aran_id=\'"+rif+"\'AND produccion_producto.planta_id_id=unidadecon_subunidad_economica.id";
+	q->exec(query);
+
+		if(q->hasResult())
+			while(q->hasResult() && q->next())
+				{
+				val=q->getValue(0);
+				std::cout<<std::endl<<val<<" "<<rif<<std::endl;
+				unidades_economicas(val);
+				subUnidadesEconomicas(val);
+				}
+
+		for(DynDlist<SubUnidadE>::Iterator it(subUEconomicas);it.has_curr();it.next())
+		{
+		produccion_producto(it.get_curr().id,anho,rif);
+		produccion_insumo(it.get_curr().id,anho, rif);
+		proveedor(it.get_curr().id, rif);
+		it.get_curr().proveedores= proveedores;
+		proveedores.empty();
+		}
+
+
+
+	}
 
 	nodo.unidadEconomica=uEconomica;
 	nodo.subUnidadesEconomicas=subUEconomicas;
@@ -157,7 +168,6 @@ void Fetch::unidades_economicas(std::string rif)
 
 void Fetch::subUnidadesEconomicas(std::string search)
 {
-
 	std::size_t found;
 	std::string capacidad, nombre, id, entidad;
 	SubUnidadE su;
@@ -385,6 +395,187 @@ void Fetch::proveedor(std::string search)
 
 
 }
+
+
+
+void Fetch::produccion_producto(std::string search,std::string anho, std::string producto)
+{
+
+	std::size_t found;
+	std::string cantidad, nombre, id,anio,cantproducido,codigo,marca;
+	Productos p;
+
+	q->clear();
+	query=(std::string)"SELECT  produccion_producto.id, produccion_producto.nombre, produccion_producto.codigo_aran_id, produccion_producto.marca, produccion_produccion_precios_r.cant_producido, produccion_produccion_precios_r.anho FROM produccion_producto, produccion_produccion_precios_r WHERE produccion_producto.id = produccion_produccion_precios_r.producto_id_id AND produccion_producto.planta_id_id  ="+"\'"+search+"\' AND produccion_producto.codigo_aran_id=\'"+producto+"\'";
+	q->exec(query);
+	q->next();
+	
+	anio=q->getValue(5);
+	anio=anio.substr(0,4);
+
+	q->reset();
+	if(q->hasResult())
+	{
+	
+		while(q->hasResult() && q->next())
+		{
+
+		 id=q->getValue(0);
+          	 nombre=q->getValue(1);
+		 codigo=q->getValue(2);
+		 marca=q->getValue(3);
+		 cantidad=q->getValue(4);
+        
+ 		 found=nombre.find("\"");
+
+			while(found!=std::string::npos)
+			{
+	
+			 nombre.erase(found,1);
+			 found=nombre.find("\"");
+		
+			}
+	
+		if(anho==anio)
+		{		
+		p.id=id;
+		p.nombre=nombre;
+		p.cod_aran=codigo;
+		p.cantidad=cantidad;
+		p.marca=marca;
+		p.anho=anio;
+		produccionProductos.insert(p);
+		
+		}
+	
+		
+		}
+
+	}
+	
+
+	q->clear();
+
+
+}
+
+void Fetch::produccion_insumo(std::string search,std::string anho, std::string producto)
+{
+
+	std::size_t found;
+	std::string cantidad, nombre, id,anio,codigo,marca;
+	Productos p;
+
+	q->clear();
+	query=(std::string)"SELECT produccion_insumo.id, produccion_insumo.nombre, produccion_insumo.codigo_aran_id, produccion_insumo.marca, produccion_consumo_precios_r.cant_comp_imp, produccion_consumo_precios_r.anho FROM produccion_insumo, produccion_consumo_precios_r, produccion_producto_t_insumo, unidadecon_subunidad_economica, produccion_producto WHERE produccion_insumo.id=produccion_consumo_precios_r.insumo_id_id AND produccion_producto_t_insumo.insumo_id_id=produccion_insumo.id AND produccion_producto.id=produccion_producto_t_insumo.producto_id_id AND unidadecon_subunidad_economica.id=produccion_insumo.planta_id_id AND produccion_producto.codigo_aran_id='"+producto+"' AND produccion_insumo.planta_id_id=\'"+search+"\'";
+	q->exec(query);
+
+	std::cout<<std::endl<<std::endl<<q->hasResult()<<std::endl<<std::endl;	
+
+	std::cout<<std::endl<<anio<<std::endl;
+
+	q->reset();
+	if(q->hasResult())
+	{
+	
+		while(q->hasResult() && q->next())
+		{
+
+		 id=q->getValue(0);
+          	 nombre=q->getValue(1);
+		 codigo=q->getValue(2);
+		 marca=q->getValue(3);
+		 cantidad=q->getValue(4);
+        
+ 		 found=nombre.find("\"");
+
+			while(found!=std::string::npos)
+			{
+	
+			 nombre.erase(found,1);
+			 found=nombre.find("\"");
+		
+			}
+	
+		if(anho==anio)
+		{		
+		p.id=id;
+		p.nombre=nombre;
+		p.cod_aran=codigo;
+		p.cantidad=cantidad;
+		p.marca=marca;
+		p.anho=anio;
+		produccionInsumos.insert(p);
+		
+		}
+	
+		
+		}
+
+	}
+	
+
+	q->clear();
+
+
+}
+
+
+void Fetch::proveedor(std::string search, std::string producto)
+{
+
+	
+	
+	std::size_t found;
+	std::string id, nombre, rif, paisProcedencia, paisOrigen;
+	Proveedores p;
+
+	q->clear();																																																								//AND cmproveedores_proveedor.pais_origen_id <> 23
+	query=(std::string)"SELECT cmproveedores_proveedor.id, cmproveedores_proveedor.nombre, cmproveedores_proveedor.rif, comun_pais.nombre, comun_pais.nombre FROM cmproveedores_proveedor, comun_pais, cmproveedores_proveedorinsumo, unidadecon_subunidad_economica, produccion_insumo, produccion_producto_t_insumo, produccion_producto WHERE cmproveedores_proveedor.pais_origen_id=comun_pais.id AND cmproveedores_proveedor.pais_procedencia_id = comun_pais.id AND cmproveedores_proveedor.pais_origen_id <> 23 AND produccion_insumo.id= cmproveedores_proveedorinsumo.insumo_id_id AND cmproveedores_proveedorinsumo.proveedor_id_id=cmproveedores_proveedor.id AND unidadecon_subunidad_economica.id=cmproveedores_proveedor.planta_id_id AND produccion_insumo.id=produccion_producto_t_insumo.insumo_id_id  AND unidadecon_subunidad_economica.id =\'"+search+"\' AND produccion_producto.id=produccion_producto_t_insumo.producto_id_id AND produccion_producto.codigo_aran_id=\'"+producto+"\'";
+	q->exec(query);
+	q->next();
+	
+	if(q->hasResult())
+	{
+	
+		while(q->hasResult() && q->next())
+		{
+
+		 id=q->getValue(0);
+          	 nombre=q->getValue(1);
+		 rif=q->getValue(2);
+		 paisOrigen=q->getValue(3);
+		 paisProcedencia=q->getValue(4);
+        
+ 		 found=nombre.find("\"");
+
+			while(found!=std::string::npos)
+			{
+	
+			 nombre.erase(found,1);
+			 found=nombre.find("\"");
+		
+			}
+	
+				
+		p.id=id;
+		p.nombre=nombre;
+		p.rif=rif;
+		p.paisOrigen=paisOrigen;
+		p.paisProcedencia=paisProcedencia;
+		proveedores.insert(p);
+	
+		}
+
+	}
+	
+
+	q->clear();
+
+
+}
+
+
 
 #endif
 
