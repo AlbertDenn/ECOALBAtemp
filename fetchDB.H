@@ -7,6 +7,8 @@
 #include <string>
 #include <fstream>
 #include <locale>
+#include <eunits.H>
+#include <tpl_dynDlist.H>
 
 class Fetch{
 
@@ -16,8 +18,15 @@ class Fetch{
 	DBConnection connection;
 	DBQuery *q = new DBQuery(connection);
 	std::string query;
-	int cont;
-	
+
+	UnidadEconomica uEconomica;
+	DynDlist <SubUnidadE> subUEconomicas;
+	DynDlist <Proveedores> proveedores;
+	DynDlist <Productos> produccionProductos;
+	DynDlist <Productos> produccionInsumos;
+	NodoProductivo nodo;	
+
+
 
 	public:
 
@@ -27,85 +36,97 @@ class Fetch{
 
 	Fetch(std::string);
 
+	NodoProductivo search(std::string,std::string);
 	void unidades_economicas(std::string);
 	void subUnidadesEconomicas(std::string);
-	void produccion_producto(std::string);
-	void produccion_insumo(std::string);
-	void proveedores_insumo(std::string);
-        void proveedores_proveedor(std::string);
-	void producto_t_insumo(std::string);
-	void socios(std::string);
-	void aditionalUE(std::string);
-	
+	void produccion_producto(std::string,std::string);
+	void produccion_insumo(std::string,std::string);
+	void proveedor(std::string);
+	UnidadEconomica get_unidadEconomica();
+	DynDlist<SubUnidadE> get_subunidades();
+	DynDlist<Productos> get_productos();
+	DynDlist<Proveedores> get_proveedores();
+
+
 
 	};
+
+
+/*UnidadEconomica Fetch::get_unidadEconomica() {return uEconomica;}
+DynDlist<SubUnidadE> Fetch::get_subunidades() {return subUEconomicas;}
+DynDlist<Productos> Fetch::get_productos(){return produccionProductos;}
+DynDlist<Proveedores> Fetch::get_proveedores(){return proveedores;}
+*/
 
 Fetch::Fetch() {
 
 	query=" ";
-	cont=0;
+	
 }
 
 Fetch::Fetch(const std::string name)
 {
 	connection.open(name.c_str());
-	cont=0;
+}
+
+
+NodoProductivo Fetch::search(std::string rif, std::string anho)
+{
+	std::locale loc;
+   	rif[0]=std::toupper(rif[0],loc);
+
+	if(rif[0]=='j'||rif[0]=='J')
+	{
+		unidades_economicas(rif);
+		subUnidadesEconomicas(rif);
+	}
+		
+	else
+	{
+		q->clear();
+		query=(std::string)"SELECT unidadecon_subunidad_economica.ue_rif FROM unidadecon_subunidad_economica, produccion_producto WHERE produccion_producto.codigo_aran_id="+"\'"+rif+"\'";
+		q->exec(query);
+		q->reset();
+
+
+		if(q->hasResult())
+			while(q->hasResult() && q->next())
+				{
+				unidades_economicas(q->getValue(0));
+				subUnidadesEconomicas(q->getValue(0));
+				}
+	}
+
+
+	for(DynDlist<SubUnidadE>::Iterator it(subUEconomicas);it.has_curr();it.next())
+		{
+		produccion_producto(it.get_curr().id,anho);
+		produccion_insumo(it.get_curr().id,anho);
+		proveedor(it.get_curr().id);
+		it.get_curr().proveedores= proveedores;
+		proveedores.empty();
+		}
+
+	nodo.unidadEconomica=uEconomica;
+	nodo.subUnidadesEconomicas=subUEconomicas;
+	nodo.productos=produccionProductos;
+	nodo.insumos=produccionInsumos;
+
+	return nodo;
 	
-	std::ofstream file;
-	file.open("unidad_economica.csv");
-	file<<"rif,nombre"<<std::endl;
-	file.close();
 
-	file.open("unidadecon_subunidad_economica.csv");
-	file<<"id,ue_rif,nombre"<<std::endl;
-	file.close();
-
-	file.open("produccion_producto.csv");
-	file<<"id,nombre,codigo_aran_id,planta_id_id"<<std::endl;
-	file.close();
-
-	file.open("produccion_insumo.csv");
-	file<<"id,nombre,codigo_aran_id,planta_id_id"<<std::endl;
-	file.close();
-
-	file.open("cmproveedores_proveedorinsumo.csv");
-	file<<"id,proveedor_id_id,insumo_id_id,comprado_r,cantidad_comprada_r"<<std::endl;
-	file.close();
-	
-	file.open("cmproveedores_proveedor.csv");
-	file<<"id,nombre,rif,pais_origen_id,pais_procedencia_id,nacional,planta_id_id"<<std::endl;
-	file.close();
-
-	file.open("produccion_producto_t_insumo.csv");
-	file<<"id,insumo_id_id,producto_id_id,anho,cantidad,activo,fecha_insercion"<<std::endl;
-	file.close();
-
-	file.open("unidadecon_socio.csv");
-	file<<"blank,id, unidad_economica_rif, rif_pasaporte, nombre, nacionalidad,tipo_persona_id, porcentaje"<<std::endl;	
-	file.close();
 
 }
 
 void Fetch::unidades_economicas(std::string rif)
 {
 
-
-        std::locale loc;
    	std::size_t found;
 	std::string nombre,query;
-	rif[0]=std::toupper(rif[0],loc);
-
 	
-	subUnidadesEconomicas(rif);
-
-	socios(rif);
-
+	q->clear();
 	query=(std::string)"SELECT rif, nombre FROM unidadecon_unidad_economica WHERE rif="+"\'"+rif+"\'";
 	
-	std::ofstream file;
-
-	file.open("unidad_economica.csv", std::ios::app);
-
 	q->exec(query);
 	q->reset();
 
@@ -124,33 +145,27 @@ void Fetch::unidades_economicas(std::string rif)
 	 found=nombre.find("\"");
 	
 	}
-	
-	file<<rif<<",\""<<nombre<<"\""<<std::endl;	
+		uEconomica.rif=rif;
+		uEconomica.nombre=nombre;	
+
 	}
 	q->clear();
-	file.close();
 
+	
 }
 
 
 void Fetch::subUnidadesEconomicas(std::string search)
 {
 
-	
-	int aux;
 	std::size_t found;
-	std::string ue_rif, nombre, ident,id ;
-	
-	std::ofstream file;
-
-	file.open("unidadecon_subunidad_economica.csv", std::ios::app);
-
-	
-	query=(std::string)"SELECT id, ue_rif, nombre FROM unidadecon_subunidad_economica WHERE ue_rif="+"\'"+search+"\'";
-	
+	std::string capacidad, nombre, id, entidad;
+	SubUnidadE su;
+	q->clear();
+	query=(std::string)"SELECT unidadecon_subunidad_economica.id, unidadecon_subunidad_economica.nombre, unidadecon_subunidad_economica.capacidad_utilizada, comun_entidad.nombre FROM  unidadecon_subunidad_economica, comun_parroquia,comun_municipio,comun_entidad WHERE unidadecon_subunidad_economica.parroquia_codigo = comun_parroquia.codigo AND comun_parroquia.municipio_codigo=comun_municipio.codigo AND comun_municipio.entidad_codigo = comun_entidad.codigo AND unidadecon_subunidad_economica.tipo_subunidad ='Pl' AND unidadecon_subunidad_economica.ue_rif="+"\'"+search+"\'";
 	q->exec(query);
-	q->reset();
 
+	q->reset();
 
 	if(q->hasResult())
 	{
@@ -158,14 +173,10 @@ void Fetch::subUnidadesEconomicas(std::string search)
 		while(q->hasResult() && q->next())
 		{
 
-		 ident=q->getValue(0);
-		 aux=atoi(ident.c_str());
-		 if(cont==0)
-		 aux=aux+1;
-		 cont++;
-		 id=std::to_string(aux);
-          	 ue_rif=q->getValue(1);
-		 nombre=q->getValue(2);
+		 id=q->getValue(0);
+          	 nombre=q->getValue(1);
+		 capacidad=q->getValue(2);
+		 entidad=q->getValue(3);
         
  		 found=nombre.find("\"");
 
@@ -178,331 +189,202 @@ void Fetch::subUnidadesEconomicas(std::string search)
 			}
 	
 		
-		
-		produccion_producto(id);
-		proveedores_proveedor(id);
+		su.id=id;
+		su.nombre=nombre;
+		su.capacidadu=capacidad;
+		su.estado=entidad;
 
-		std::cout<<id<<","<<ue_rif<<",\""<<nombre<<"\""<<std::endl;	
-		file<<id<<","<<ue_rif<<",\""<<nombre<<"\""<<std::endl;	
+		subUEconomicas.insert(su);
+			
 		}
 
 	}
-
-	else
-	file<<"00"<<","<<"0000000000"<<",\""<<"NO ENCONTRADO"<<"\""<<std::endl;
 	
 
 	q->clear();
-	file.close();
 
+		
 }
 
-void Fetch::produccion_producto(std::string planta)
+
+
+void Fetch::produccion_producto(std::string search,std::string anho)
 {
 
 	std::size_t found;
-	std::string id,nombre,codigo_aran_id,planta_id_id;
-	
-	std::ofstream file;
+	std::string cantidad, nombre, id,anio,cantproducido,codigo,marca;
+	Productos p;
 
-	file.open("produccion_producto.csv",std::ios::app);
-
-	query=(std::string)"SELECT id, nombre, codigo_aran_id, planta_id_id FROM produccion_producto WHERE planta_id_id="+"\'"+planta+"\'";
-
+	q->clear();
+	query=(std::string)"SELECT  produccion_producto.id, produccion_producto.nombre, produccion_producto.codigo_aran_id, produccion_producto.marca, produccion_produccion_precios_r.cant_producido, produccion_produccion_precios_r.anho FROM produccion_producto, produccion_produccion_precios_r WHERE produccion_producto.id = produccion_produccion_precios_r.producto_id_id AND produccion_producto.planta_id_id  ="+"\'"+search+"\'";
 	q->exec(query);
-	q->reset();
+	q->next();
+	
+	anio=q->getValue(5);
+	anio=anio.substr(0,4);
 
+	q->reset();
 	if(q->hasResult())
 	{
-
+	
 		while(q->hasResult() && q->next())
 		{
-	
+
 		 id=q->getValue(0);
-		 nombre=q->getValue(1);
-		 codigo_aran_id=q->getValue(2);
-		 planta_id_id=q->getValue(3);
-        	
+          	 nombre=q->getValue(1);
+		 codigo=q->getValue(2);
+		 marca=q->getValue(3);
+		 cantidad=q->getValue(4);
+        
  		 found=nombre.find("\"");
-	
+
 			while(found!=std::string::npos)
 			{
-		
+	
 			 nombre.erase(found,1);
 			 found=nombre.find("\"");
-			
-			}
 		
-		producto_t_insumo(id);
-		file<<id<<",\""<<nombre<<"\","<<codigo_aran_id<<","<<planta_id_id<<std::endl;	
-
+			}
+	
+		if(anho==anio)
+		{		
+		p.id=id;
+		p.nombre=nombre;
+		p.cod_aran=codigo;
+		p.cantidad=cantidad;
+		p.marca=marca;
+		p.anho=anio;
+		produccionProductos.insert(p);
+		
 		}
-	}
+	
+		
+		}
 
-	else
-	file<<"00"<<",\""<<"NO ENCONTRADO"<<"\","<<"0000000000"<<","<<"0000000000"<<std::endl;
+	}
+	
 
 	q->clear();
-	file.close();
+
 
 }
 
-void Fetch::produccion_insumo(std::string insumo)
+void Fetch::produccion_insumo(std::string search,std::string anho)
 {
+
 	std::size_t found;
-	std::string id,nombre,codigo_aran_id,planta_id_id;
-	
-	std::ofstream file;
+	std::string cantidad, nombre, id,anio,codigo,marca;
+	Productos p;
 
-	file.open("produccion_insumo.csv",std::ios::app);
-
-	query=(std::string)"SELECT id, nombre, codigo_aran_id, planta_id_id FROM produccion_insumo WHERE id="+"\'"+insumo+"\'";
-
+	q->clear();
+	query=(std::string)"SELECT produccion_insumo.id, produccion_insumo.nombre, produccion_insumo.codigo_aran_id, produccion_insumo.marca, produccion_consumo_precios_r.cant_comp_imp, produccion_consumo_precios_r.anho FROM produccion_insumo, produccion_consumo_precios_r, unidadecon_subunidad_economica WHERE produccion_insumo.id=produccion_consumo_precios_r.insumo_id_id AND produccion_insumo.planta_id_id = unidadecon_subunidad_economica.id AND produccion_insumo.planta_id_id=\'"+search+"\'";
 	q->exec(query);
-	q->reset();
 
+	std::cout<<std::endl<<std::endl<<q->hasResult()<<std::endl<<std::endl;	
+
+	std::cout<<std::endl<<anio<<std::endl;
+
+	q->reset();
 	if(q->hasResult())
 	{
-
+	
 		while(q->hasResult() && q->next())
 		{
-	
+
 		 id=q->getValue(0);
-		 nombre=q->getValue(1);
-		 codigo_aran_id=q->getValue(2);
-		 planta_id_id=q->getValue(3);
-        	
+          	 nombre=q->getValue(1);
+		 codigo=q->getValue(2);
+		 marca=q->getValue(3);
+		 cantidad=q->getValue(4);
+        
  		 found=nombre.find("\"");
-	
+
 			while(found!=std::string::npos)
 			{
-		
+	
 			 nombre.erase(found,1);
 			 found=nombre.find("\"");
-			
+		
 			}
+	
+		if(anho==anio)
+		{		
+		p.id=id;
+		p.nombre=nombre;
+		p.cod_aran=codigo;
+		p.cantidad=cantidad;
+		p.marca=marca;
+		p.anho=anio;
+		produccionInsumos.insert(p);
 		
-		
-		aditionalUE(planta_id_id);
+		}
 	
 		
-
-		file<<id<<",\""<<nombre<<"\","<<codigo_aran_id<<","<<planta_id_id<<std::endl;	
-
 		}
-	}
 
-	else
-	file<<"00"<<",\""<<"NO ENCONTRADO"<<"\","<<"0000000000"<<","<<"0000000000"<<std::endl;
+	}
+	
 
 	q->clear();
-	file.close();
-
-
 
 
 }
 
-void Fetch::proveedores_insumo(std::string insumo)
+
+
+void Fetch::proveedor(std::string search)
 {
 
-	//std::size_t found;
-	std::string id,proveedor_id_id,insumo_id_id,comprado_r,cantidad_comprada_r,query;
 	
-	std::ofstream file;
-
-	file.open("cmproveedores_proveedorinsumo.csv", std::ios::app);
-
-	query=(std::string)"SELECT id,proveedor_id_id,insumo_id_id,comprado_r,cantidad_comprada_r FROM cmproveedores_proveedorinsumo WHERE insumo_id_id="+"\'"+insumo+"\'";
-
-	q->exec(query);
-	q->reset();
-
-	if(q->hasResult())
-	{	
-		while(q->hasResult() && q->next())
-		{
 	
-		 id=q->getValue(0);
-		 proveedor_id_id=q->getValue(1);
-		 insumo_id_id=q->getValue(2);
-		 comprado_r=q->getValue(3);
-		 cantidad_comprada_r=q->getValue(4);
-        	
- 		file<<id<<",\""<<proveedor_id_id<<"\","<<insumo_id_id<<","<<comprado_r<<","<<cantidad_comprada_r<<std::endl;	
-		}
-
-	}
-
-	else
-	
-	file<<"00"<<",\""<<"00000"<<"\","<<"00000"<<","<<"NONE"<<","<<"NONE"<<std::endl;	
-
-
-	q->clear();
-	file.close();
-
-}
-
-void Fetch::proveedores_proveedor(std::string planta)
-{
-
 	std::size_t found;
-	std::string id,nombre,rif,pais_origen_id,pais_procedencia_id,nacional,planta_id_id,query;
-	
-	std::ofstream file;
+	std::string id, nombre, rif, paisProcedencia, paisOrigen;
+	Proveedores p;
 
-	file.open("cmproveedores_proveedor.csv", std::ios::app);
-
-	query=(std::string)"SELECT id,nombre,rif,pais_origen_id,pais_procedencia_id,nacional,planta_id_id FROM cmproveedores_proveedor WHERE planta_id_id="+"\'"+planta+"\'";
-
+	q->clear();																																																								//AND cmproveedores_proveedor.pais_origen_id <> 23
+	query=(std::string)"SELECT cmproveedores_proveedor.id, cmproveedores_proveedor.nombre, cmproveedores_proveedor.rif, comun_pais.nombre, comun_pais.nombre FROM cmproveedores_proveedor, comun_pais, cmproveedores_proveedorinsumo, unidadecon_subunidad_economica, produccion_insumo WHERE cmproveedores_proveedor.pais_origen_id=comun_pais.id AND cmproveedores_proveedor.pais_procedencia_id = comun_pais.id AND cmproveedores_proveedor.pais_origen_id <> 23 AND produccion_insumo.id= cmproveedores_proveedorinsumo.insumo_id_id AND cmproveedores_proveedorinsumo.proveedor_id_id=cmproveedores_proveedor.id AND unidadecon_subunidad_economica.id=cmproveedores_proveedor.planta_id_id AND unidadecon_subunidad_economica.id ="+"\'"+search+"\' ";
 	q->exec(query);
-	q->reset();
-
+	q->next();
+	
 	if(q->hasResult())
-	{	
-
+	{
+	
 		while(q->hasResult() && q->next())
 		{
-	
+
 		 id=q->getValue(0);
-		 nombre=q->getValue(1);
+          	 nombre=q->getValue(1);
 		 rif=q->getValue(2);
-		 pais_origen_id=q->getValue(3);
-		 pais_procedencia_id=q->getValue(4);
-		 nacional=q->getValue(5);
- 		 planta_id_id=q->getValue(6);
-        	
-		 found=nombre.find("\"");
-	
+		 paisOrigen=q->getValue(3);
+		 paisProcedencia=q->getValue(4);
+        
+ 		 found=nombre.find("\"");
+
 			while(found!=std::string::npos)
 			{
-		
+	
 			 nombre.erase(found,1);
 			 found=nombre.find("\"");
-			
+		
 			}
 	
-		proveedores_insumo(id);
-		
-		file<<id<<",\""<<nombre<<"\","<<rif<<","<<pais_origen_id<<","<<pais_procedencia_id<<","<<nacional<<","<<planta_id_id<<std::endl;	
+				
+		p.id=id;
+		p.nombre=nombre;
+		p.rif=rif;
+		p.paisOrigen=paisOrigen;
+		p.paisProcedencia=paisProcedencia;
+		proveedores.insert(p);
+	
 		}
+
 	}
-
-	else
-	file<<"00"<<",\""<<"NO ENCONTRADO"<<"\","<<"00"<<","<<"NONE"<<","<<"NONE"<<","<<"V"<<","<<"00000000"<<std::endl;		
-
-	q->clear();
-	file.close();
-
-}
-
-void Fetch::producto_t_insumo(std::string producto)
-{
-
-	//std::size_t found;
-	std::string id,insumo_id_id,producto_id_id,anho,cantidad,activo,fecha_insercion,query;
-	
-	std::ofstream file;
-
-	file.open("produccion_producto_t_insumo.csv", std::ios::app);
-
-	query=(std::string)"SELECT id,insumo_id_id,producto_id_id,anho,cantidad,activo,fecha_insercion FROM produccion_producto_t_insumo WHERE producto_id_id="+"\'"+producto+"\'";
-	
-	q->exec(query);
-	q->reset();
-
-
-
-	while(q->hasResult() && q->next())
-	{
-
-	 id=q->getValue(0);
-	 insumo_id_id=q->getValue(1);
-	 producto_id_id=q->getValue(2);
-	 anho=q->getValue(3);
-	 cantidad=q->getValue(4);
-	 activo=q->getValue(5);
-	 fecha_insercion=q->getValue(6);
-
-
-	produccion_insumo(insumo_id_id);	
-
-	file<<id<<",\""<<insumo_id_id<<"\","<<producto_id_id<<","<<anho<<","<<cantidad<<","<<activo<<","<<fecha_insercion<<std::endl;	
-	//file<<id<<",\""<<insumo_id_id<<"\","<<producto_id_id<<","<<anho<<","<<cantidad<<","<<std::endl;	
-	}
-	q->clear();
-	file.close();
-
-}
-
-void Fetch::socios(std:: string rif)
-{
-
-	int i=0;
-	std::size_t found;
-	std::string id, unidad_economica_rif, rif_pasaporte, nombre, nacionalidad,tipo_persona_id, porcentaje;
-	
-	std::ofstream file;
-
-	file.open("unidadecon_socio.csv", std::ios::app);
-
-	query=(std::string) "SELECT id, unidad_economica_rif, rif_pasaporte, nombre, nacionalidad,tipo_persona_id, porcentaje FROM unidadecon_socio WHERE unidad_economica_rif="+"\'"+rif+"\'";
-
-	q->exec(query);
-	q->reset();
-
-	if(q->hasResult())
-	{
-		while(q->hasResult() && q->next())
-		{
-	
-		 id=q->getValue(0);
-		 unidad_economica_rif=q->getValue(1);
-		 rif_pasaporte=q->getValue(2);
-		 nombre=q->getValue(3);
-		 nacionalidad=q->getValue(4);
-		 tipo_persona_id=q->getValue(5);
-	 	 porcentaje=q->getValue(6);
-	        
-		 found=nombre.find("\"");
-	
-			while(found!=std::string::npos)
-			{
-		
-			 nombre.erase(found,1);
-			 found=nombre.find("\"");
-			
-			}
-	
-		file<<std::to_string(i)<<","<<id<<","<<unidad_economica_rif<<","<<rif_pasaporte<<",\""<<nombre<<"\","<<nacionalidad<<","<<tipo_persona_id<<","<<porcentaje<<std::endl;	
-		i++;
-		}
-	}
-	else
-	
-	//file<<std::to_string(i)<<","<<"00"<<","<<"0000000000"<<","<<""<<",\""<<"NONE"<<"\","<<"NONE"<<","<<"NONE"<<","<<"00"<<std::endl;
 	
 
 	q->clear();
-	file.close();
+
 
 }
-
-
-void Fetch::aditionalUE(std::string planta)
-{
-		std::string query=(std::string)"SELECT ue_rif FROM unidadecon_subunidad_economica WHERE id="+"\'"+planta+"\'";
-		q->exec(query);
-		
-		while(q->hasResult() && q->next())
-		{
-		 unidades_economicas(q->getValue(0));
-		}
-		
-
-}
-
 
 #endif
 

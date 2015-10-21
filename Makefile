@@ -26,15 +26,6 @@ all: test
 clean:
 	rm -f test *.o *.csv
 
-test:  test.o grafo.o csvparser.o 
+test:  test.C eunits.H fetchDB.H
 	$(CXX) $(FLAGS) $(INCLUDE) $@.C -o $@ $(LIBS)
-
-test.o: test.C fetchDB.H
-	$(CXX) $(FLAGS) $(INCLUDE) -c test.C
-
-grafo.o: grafo.H grafo.C csvparser.o
-	$(CXX) $(FLAGS) $(INCLUDE) -c grafo.C
-
-csvparser.o: csvparser.h csvparser.c
-	$(CC) $(INCLUDE) $*.c -g -c
 
