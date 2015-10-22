@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
 	Fetch f("file.txt");
 
-	NodoProductivo nodo;
+	Data nodo;
 
 	nodo=f.search(rif,anho);
 	std::cout<<std::endl<<std::endl<<"BUSCANDOO UNIDAD ECONOMICA o PRODUCTO: "<<rif<<" "<<"CON DATOS DE ANIO:"<<anho<<std::endl;
@@ -40,21 +40,26 @@ int main(int argc, char *argv[])
 
 	std::cout<<std::endl<<"----------RESULTS----------"<<std::endl<<std::endl;
 
-		for(DynDlist <Productos>::Iterator it3(nodo.productos);it3.has_curr();it3.next())
+	for(DynArray <Productos>::Iterator it(nodo.productos);it.has_curr();it.next())
+	{
+		std::cout<<std::endl<<"Product: "<<it.get_curr().nombre<<std::endl<<"Plant: "<<it.get_curr().subue.nombre<<std::endl<<"Company: "<<it.get_curr().subue.ue.nombre<<std::endl<<"REQUIRES:";
+	   for(DynArray<Arco>::Iterator it0(it.get_curr().arcs);it0.has_curr();it0.next())
+
+		for(DynArray<Productos>::Iterator it1(nodo.insumos);it1.has_curr();it1.next())
 		{
-		std::cout<<"---PRODUCTOS---"<<std::endl<<std::endl;
-		std::cout<<"Codigo:"<<it3.get_curr().cod_aran<<std::endl<<"Nombre:"<<it3.get_curr().nombre<<std::endl<<"Marca:"<<it3.get_curr().marca<<std::endl<<"Cantidad Producida:"<<it3.get_curr().cantidad<<std::endl<<"Anho:"<<it3.get_curr().anho<<std::endl<<std::endl;
-		std::cout<<"UNIDAD ECONOMICA:  "<< nodo.unidadEconomica.nombre<<" "<<nodo.unidadEconomica.rif;
-		std::cout<<std::endl<<"SUBUNIDAD ECONOMICA:  ";
-			for(DynDlist<SubUnidadE>::Iterator it1(nodo.subUnidadesEconomicas);it1.has_curr();it1.next())
-				std::cout<<it1.get_curr().nombre<<std::endl<<"Estado:"<<it1.get_curr().estado<<std::endl<<std::endl;
-			
+
+			if(it0.get_curr().insumoID==it1.get_curr().id)
+			std::cout<<std::endl<<"--"<<it1.get_curr().nombre;
+		
 		}
-	
+		
+		std::cout<<std::endl<<std::endl<<"--------------------------------"<<std::endl;
 
 
-	
-	
+	}
+
+
+	cout<<endl;
 
 
 return 0;

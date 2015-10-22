@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include <string>
-#include <tpl_dynDlist.H>
+#include <tpl_dynArray.H>
 
 
 struct Proveedores
@@ -12,39 +12,51 @@ struct Proveedores
 	
 };
 
-struct SubUnidadE
-{
-	std::string id, ue_rif, nombre, estado, capacidadu;
-	DynDlist<Proveedores> proveedores;
-
-};
 
 struct UnidadEconomica
 {
 	std::string rif, nombre;
 };
 
+struct SubUnidadE
+{
+	std::string id, ue_rif, nombre, estado, capacidadu;
+	UnidadEconomica ue;
+	DynArray<Proveedores> proveedores;
+
+};
 
 struct Medida
 {
 	std::string nombre, descripcion;
 };
 
+
+struct Arco
+{
+	std::string productoID, insumoID, cantidad;
+
+};
+
+
 struct Productos
 {
 
 	std::string id, cod_aran, nombre, cantidad,anho,marca;
+	DynArray<Arco> arcs;
+	SubUnidadE subue;
 
 };
 
-struct NodoProductivo
+struct Data
 {
-	UnidadEconomica unidadEconomica;
-	DynDlist<SubUnidadE> subUnidadesEconomicas;
-	DynDlist<Productos> productos;
-	DynDlist<Productos> insumos;
+	DynArray<Productos> productos;
+	DynArray<Productos> insumos;
+
 
 };
+
+
 
 
 #endif
