@@ -24,9 +24,6 @@ class Fetch{
 
 	DynArray <Productos> produccionProductos;
 	DynArray <Productos> produccionInsumos;
-//	DynArray <Arco> arclist;
-
-
 
 	public:
 
@@ -80,6 +77,8 @@ DynArray<Arco> Fetch::arcs(std::string id)
 	query=(std::string)"SELECT produccion_producto_t_insumo.insumo_id_id, produccion_producto_t_insumo.cantidad FROM produccion_producto_t_insumo, produccion_producto WHERE produccion_producto_t_insumo.producto_id_id=produccion_producto.id AND produccion_producto_t_insumo.producto_id_id='"+id+"'";
 	q->exec(query);
 
+	std::cout<<std::endl<<q->hasResult()<<std::endl;
+
 	while(q->hasResult() && q->next())
 	{
 	a.productoID=id;
@@ -95,37 +94,6 @@ DynArray<Arco> Fetch::arcs(std::string id)
 	
 
 }
-
-
-/*
-DynArray<Arco> Fetch::arcs()
-{
-	DynArray<Arco> arclist;
-	Arco a;
-
-	for(DynArray<Productos>::Iterator it1(produccionProductos);it1.has_curr();it1.next())
-	{
-
-	q->clear();
-	query=(std::string)"SELECT produccion_producto_t_insumo.insumo_id_id, produccion_producto_t_insumo.cantidad FROM produccion_producto_t_insumo, produccion_producto WHERE produccion_producto_t_insumo.producto_id_id=produccion_producto.id AND produccion_producto_t_insumo.producto_id_id='"+it1.get_curr().id+"'";
-	q->exec(query);
-
-	while(q->hasResult() && q->next())
-	{
-	a.productoID=it1.get_curr().id;
-	a.insumoID=q->getValue(0);
-	a.cantidad=q->getValue(1);
-	arclist.append(a);
-
-	}
-	
-	}
-
-	return arclist;
-	
-
-}
-*/
 
 SubUnidadE Fetch::retrieve_planta(std::string id)
 {
@@ -164,7 +132,6 @@ Data Fetch::search(std::string rif, std::string anho)
 		it.get_curr().proveedores.append(proveedor(it.get_curr().id));
 		}
 
-		//produccion_insumo(arclist);
 
 
 	}
@@ -196,15 +163,18 @@ Data Fetch::search(std::string rif, std::string anho)
 		produccion_producto(it.get_curr(),anho,rif);
 		it.get_curr().proveedores.append(proveedor(it.get_curr().id, rif));
 		}
-
-	 	for(DynArray<Productos>::Iterator it(produccionProductos);it.has_curr();it.next())
-		produccion_insumo(it.get_curr().arcs);
-
-
+	 	
 	}
 
 
-	//rawData.arcs=arclist;
+		for(DynArray<Productos>::Iterator it(produccionProductos);it.has_curr();it.next())
+		{
+		std::cout<<std::endl<<"searching requirements for: "<<it.get_curr().nombre;
+		produccion_insumo(it.get_curr().arcs);
+		}
+
+
+
 	rawData.productos=produccionProductos;
 	rawData.insumos=produccionInsumos;
 
@@ -292,7 +262,8 @@ void Fetch::subUnidadesEconomicas(std::string search)
 		su.capacidadu=capacidad;
 		su.estado=entidad;
 		su.ue= unidades_economicas(search);
-	
+		
+		std::cout<<nombre<<std::endl;
 		subUEconomicas.append(su);
 			
 		}
@@ -354,6 +325,7 @@ void Fetch::produccion_producto(SubUnidadE planta, std::string anho)
 		p.marca=marca;
 		p.anho=anio;
 		p.subue=planta;
+		p.arcs=arcs(id);		
 
 		produccionProductos.append(p);
 		
@@ -555,73 +527,6 @@ void Fetch::produccion_producto(SubUnidadE planta, std::string anho, std::string
 
 }
 
-/*
-void Fetch::produccion_insumo(DynArray<Arco> arclist, std::string producto)
-{
-
-	std::size_t found;
-	std::string cantidad, nombre, id,anio,codigo,marca;
-	Productos p;
-
-
-for(DynArray<Arco>::Iterator it(arclist); it.has_curr();it.next())
-   {
-
-	q->clear();
-	query=(std::string)"SELECT DISTINCT produccion_insumo.id, produccion_insumo.nombre, produccion_insumo.codigo_aran_id, produccion_insumo.marca, produccion_consumo_precios_r.cant_comp_imp, produccion_consumo_precios_r.anho FROM produccion_insumo, produccion_consumo_precios_r, produccion_producto_t_insumo, unidadecon_subunidad_economica, produccion_producto WHERE produccion_insumo.id=produccion_consumo_precios_r.insumo_id_id AND produccion_producto_t_insumo.insumo_id_id=produccion_insumo.id AND produccion_producto.id=produccion_producto_t_insumo.producto_id_id AND unidadecon_subunidad_economica.id=produccion_insumo.planta_id_id AND produccion_insumo.id=\'"+it.get_curr().productoID+"\'";
-	q->exec(query);
-	q->next();
-
-	anio=q->getValue(5);
-	anio=anio.substr(0,4);
-
-
-
-	q->reset();
-
-	if(q->hasResult())
-	{
-	
-		while(q->hasResult() && q->next())
-		{
-
-		 id=q->getValue(0);
-          	 nombre=q->getValue(1);
-		 codigo=q->getValue(2);
-		 marca=q->getValue(3);
-		 cantidad=q->getValue(4);
-        
- 		 found=nombre.find("\"");
-
-			while(found!=std::string::npos)
-			{
-	
-			 nombre.erase(found,1);
-			 found=nombre.find("\"");
-		
-			}
-	
-		p.id=id;
-		p.nombre=nombre;
-		p.cod_aran=codigo;
-		p.cantidad=cantidad;
-		p.marca=marca;
-		p.anho=anio;
-		p.subue=retrieve_planta(id);
-		produccionInsumos.append(p);
-		
-		
-	
-		
-		}
-
-	}
-	
-
-   }
-}
-
-*/
 Proveedores Fetch::proveedor(std::string search, std::string producto)
 {
 	
