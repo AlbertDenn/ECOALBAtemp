@@ -8,8 +8,7 @@
 
 struct Proveedores
 {
-	std::string id, nombre, rif, paisProcedencia, paisOrigen;
-	
+	std::string insumoID, nombre, rif, paisProcedencia, paisOrigen;
 };
 
 
@@ -23,7 +22,6 @@ struct SubUnidadE
 	std::string id, ue_rif, nombre, estado, capacidadu;
 	UnidadEconomica ue;
 	DynArray<Proveedores> proveedores;
-
 };
 
 struct Medida
@@ -38,24 +36,19 @@ struct Arco
 
 };
 
+struct Insumos
+{
+	std::string nombre, cod_aran, id, cantidad, marca, anho;
+};
 
 struct Productos
 {
 
 	std::string id, cod_aran, nombre, cantidad,anho,marca;
-	DynArray<Arco> arcs;
 	SubUnidadE subue;
+	DynArray<Insumos> insumos;
 
 };
-
-struct Data
-{
-	DynArray<Productos> productos;
-	DynArray<Productos> insumos;
-
-
-};
-
 
 
 
