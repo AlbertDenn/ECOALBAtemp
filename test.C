@@ -7,14 +7,63 @@ TEST DE USO DE DATOS DE BIENES Y COMPAÑIAS
 #include <stdio.h>
 #include <dbQuery.H>
 #include <string>
-#include "fetchDB.H"
+#include "fetchByCode.H"
+#include "fetchByRif.H"
+#include "DownRiver.H"
+#include "bloomFilter.H"
 
 # include <tpl_dynArray.H>
 # include <tpl_agraph.H>
+#include <tpl_dynSetHash.H>
+#include <stdlib.h>
 
+#include <pthread.h>
 
 #include <fstream>
 
+
+
+/*
+struct Data
+{
+
+char *rif,*anho;
+
+};
+
+void* rootfind(void *ptr)
+{
+
+Data *d= (struct Data*) ptr;
+
+FetchByCode root("file.txt");
+
+DynArray<Productos> *P;
+
+P=new DynArray<Productos>(root.search(d->rif,d->anho));
+
+pthread_exit((void *)P);
+
+
+}
+
+void* downriverfind(void *ptr)
+{
+
+Data *d= (struct Data*) ptr;
+
+DownRiver node("file.txt");
+
+DynArray<Productos> *P;
+
+P=new DynArray<Productos>(node.search(d->rif,d->anho));
+
+pthread_exit((void *)P);
+
+
+}
+
+*/
 
 int main(int argc, char *argv[])
 {
@@ -25,66 +74,99 @@ int main(int argc, char *argv[])
 	return 0;
 	}
 
-	std::string rif, anho;
+	char* rif,*anho;
 	rif=argv[1];
 	anho=argv[2];
+	DynArray<Productos> raiz,nodoDown;
 
-	Fetch f("file.txt");
+	bloom_parameters parameters;
+	parameters.projected_element_count = 5000;
+	parameters.false_positive_probability = 0.0001; // 1 in 10000
+	parameters.compute_optimal_parameters(); 
+	bloom_filter filtro(parameters);
 
-	DynArray<Productos> nodo;
-
-	std::cout<<std::endl<<std::endl<<"BUSCANDO UNIDAD ECONOMICA o PRODUCTO: "<<rif<<" "<<"CON DATOS DE ANIO:"<<anho<<std::endl;
-	nodo=f.search(rif,anho);
-
+/*
+using Net = Array_Graph<Graph_Anode<DynArray<Productos>>, Graph_Aarc<unsigned int>>;	
+DynArray<Net::Node*> nodes;
+Net red;
 	
+
+//SEPARAR EN HILOS DE EJECUCION DIFERENTES
+
+pthread_t thread;
+d.rif=rif;
+d.anho=anho;
+void *something;
+pthread_create(&thread,NULL, rootfind, (void*) &d);
+pthread_join(thread,&something);
+p1=(DynArray<Productos>*)something;
+*/
+
+
 ////////////TEST FROM HERE//////////////
 
-		
-		bool found=0;
 
-	   for(DynArray<Productos>::Iterator it(nodo);it.has_curr();it.next())
-	    {
 
-			if(!it.get_curr().insumos.is_empty())
-			std::cout<<std::endl<<std::endl<<"----------PRODUCTO:"<<it.get_curr().nombre<<std::endl<<std::endl;
+	std::locale loc;
+   	rif[0]=std::toupper(rif[0],loc);
+	std::string val;
 
-		for(DynArray<Insumos>::Iterator it1(it.get_curr().insumos);it1.has_curr();it1.next())
-			{
-
-			std::cout<<std::endl<<"***INSUMO:"<<it1.get_curr().nombre<<std::endl;
-			for(DynArray<Proveedores>::Iterator it2(it.get_curr().subue.proveedores);it2.has_curr();it2.next())
-				{
-
-					if(it1.get_curr().id==it2.get_curr().insumoID)
-					{
-					std::cout<<std::endl<<"- ORIGEN: "<<it2.get_curr().nombre<<" -- "<<it2.get_curr().paisOrigen<<std::endl; 
-					found=1;
-					}
-			
-				}
-
-			 if(found==0)
-			 std::cout<<std::endl<<"- ORIGEN: NO INFO"<<std::endl;
-			else
-			found=0;
-			
- 			  
-			}
-
-	    }
-
-	if(nodo.is_empty())
-	std::cout<<std::endl<<"NO SE ENCONTRARON PRODUCTOS CON IMPORTACIONES ASOCIADOS ESE RIF - PRODUCTO"<<std::endl<<std::endl;
-
+	if(rif[0]=='j'||rif[0]=='J')
+	{
+	std::cout<<std::endl<<"BUSQUEDA POR RIF"<<std::endl;
+	FetchByRif root("file.txt");
+	raiz=root.search(rif,anho);
+	if(raiz.size()==0)
+	std::cout<<"---SIN RESULTADO---"<<std::endl<<std::endl;
+	}
+	else
+	{
+	std::cout<<std::endl<<"BUSQUEDA POR PRODUCTO"<<std::endl;
+	FetchByCode root("file.txt");
+	raiz=root.search(rif,anho);
+	if(raiz.size()==0)
+	std::cout<<"---SIN RESULTADO---"<<std::endl<<std::endl;
+	}
 	
-	std::cout<<std::endl<<std::endl<<"--------------------------------"<<std::endl;
+	if(raiz.size()!=0)
+	std::cout<<std::endl<<std::endl<<"-------------ROOT-------------"<<std::endl;
 
 
+	for(DynArray<Productos>::Iterator it(raiz);it.has_curr();it.next())
+	{
+		std::cout<<std::endl<<it.get_curr().nombre<<" -- "<<it.get_curr().id<<" -- "<<it.get_curr().cod_aran<<" -- "<<it.get_curr().subue.ue.nombre<<std::endl;
+		filtro.insert(it.get_curr().nombre);
+	}
+
+
+	std::cout<<std::endl<<std::endl<<"----------------DOWN RIVER LEVEL ONE----------------"<<std::endl;
 	
+	
+	DownRiver dr("file.txt");
+	nodoDown=dr.search(anho,raiz,filtro);
+	
+	for(DynArray<Productos>::Iterator it(nodoDown);it.has_curr();it.next())
+	{
+		std::cout<<std::endl<<it.get_curr().nombre<<" -- "<<it.get_curr().id<<" -- "<<it.get_curr().subue.ue.nombre<<std::endl;
+		if(!filtro.contains(it.get_curr().nombre))
+		filtro.insert(it.get_curr().id);
+	}
+
+	std::cout<<std::endl<<nodoDown.size()<<std::endl;
+	
+	std::cout<<std::endl<<std::endl<<"----------------DOWN RIVER LEVEL TWO----------------"<<std::endl;
+	
+	nodoDown=dr.search(anho,nodoDown,filtro);
 
 
-	cout<<endl;
+	for(DynArray<Productos>::Iterator it(nodoDown);it.has_curr();it.next())
+	{
+		std::cout<<std::endl<<it.get_curr().nombre<<" -- "<<it.get_curr().cod_aran<<" -- "<<it.get_curr().subue.ue.nombre<<std::endl;
 
+	}
+	std::cout<<std::endl<<nodoDown.size()<<std::endl;
+
+		std::cout<<std::endl<<"------------------------------------------"<<std::endl<<std::endl;
 
 return 0;
 

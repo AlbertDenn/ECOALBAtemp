@@ -26,6 +26,6 @@ all: test
 clean:
 	rm -f test *.o *.csv
 
-test:  test.C eunits.H fetchDB.H
+test:  test.C eunits.H fetchByCode.H fetchByRif.H DownRiver.H
 	$(CXX) $(FLAGS) $(INCLUDE) $@.C -o $@ $(LIBS)
 
