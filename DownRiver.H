@@ -20,12 +20,10 @@ class DownRiver
 	DBConnection connection;
 	DBQuery *q = new DBQuery(connection);
 	std::string query;
-
 	
-	bloom_filter filter;
-	
-	DynArray<Productos> produccionProductos;
-	DynArray<SubUnidadE> subUEconomicas;
+	DynDlist<Productos> produccionProductos;
+	DynDlist<SubUnidadE> subUEconomicas;
+	bloom_filter *filter;
 
 
 	public:
@@ -36,13 +34,13 @@ class DownRiver
 
 	DownRiver(std::string);
 
-	DynArray<Proveedores> proveedor(std::string,std::string, std::string);
+	DynDlist<Proveedores> proveedor(std::string,std::string, std::string);
 	void produccion_producto(SubUnidadE, std::string,std::string);
-	DynArray<Insumos> produccion_insumo(std::string);
-	DynArray<Productos> search(std::string, DynArray<Productos>,bloom_filter);
+	DynDlist<Insumos> produccion_insumo(std::string);
+	DynDlist<Productos> search(std::string, DynDlist<Productos>);
 	UnidadEconomica unidades_economicas(std::string);
 	SubUnidadE subUnidadesEconomicas(std::string);
-	DynArray<std::string> extract_codes(DynArray<Productos>);
+	DynDlist<std::string> extract_codes(DynDlist<Productos>);
 
 };
 
@@ -55,20 +53,28 @@ DownRiver::DownRiver()
 DownRiver::DownRiver(const std::string name)
 {
 	connection.open(name.c_str());
+	bloom_parameters parameters;
+	parameters.projected_element_count = 5000;
+	parameters.false_positive_probability = 0.0001; // 1 in 10000
+	parameters.compute_optimal_parameters(); 
+	filter= new bloom_filter(parameters);
+
+
+
 }
 
 
-DynArray<std::string> DownRiver::extract_codes(DynArray<Productos> sofar)
+DynDlist<std::string> DownRiver::extract_codes(DynDlist<Productos> sofar)
 {
-	DynArray<std::string> codes;
+	DynDlist<std::string> codes;
 
-	for(DynArray<Productos>::Iterator it(sofar);it.has_curr();it.next())
+	for(DynDlist<Productos>::Iterator it(sofar);it.has_curr();it.next())
 		{
-			if(!filter.contains(it.get_curr().cod_aran))
+			if(!filter->contains(it.get_curr().cod_aran))
 			{
 			 codes.append(it.get_curr().cod_aran);
-			 filter.insert(it.get_curr().cod_aran);
-			 std::cout<<std::endl<<it.get_curr().cod_aran<<std::endl;
+			 filter->insert(it.get_curr().cod_aran);
+			 filter->insert(it.get_curr().nombre);
 			}
 
 
@@ -79,16 +85,19 @@ return codes;
 
 
 
-DynArray<Productos> DownRiver::search(std::string anho,DynArray<Productos> sofar, bloom_filter filtro)
+ DynDlist<Productos> DownRiver::search(std::string anho,const DynDlist<Productos> sofar )
 {
-	filter=filtro;
-
+	
 	DBQuery f=*q;
 
-	DynArray<std::string>codigo=extract_codes(sofar);
+	DynDlist<std::string>codigo=extract_codes(sofar);
 
-for(DynArray<std::string>::Iterator it0(codigo);it0.has_curr();it0.next())
+std::cout<<std::endl<<"FOUND:"<<codigo.size()<<" Codes"<<std::endl;
+int x=0;
+DynDlist<Productos>::Iterator it(produccionProductos);
+for(DynDlist<std::string>::Iterator it0(codigo);it0.has_curr();it0.next())
 {
+	std::cout<<std::endl<<++x<<" of "<<codigo.size()<<" to go.."<<std::endl;
 	f.clear();
 	query=(std::string)"SELECT DISTINCT unidadecon_subunidad_economica.ue_rif FROM unidadecon_subunidad_economica, produccion_insumo WHERE produccion_insumo.planta_id_id=unidadecon_subunidad_economica.id AND produccion_insumo.codigo_aran_id='"+it0.get_curr()+"'";
 	f.exec(query);
@@ -103,14 +112,33 @@ for(DynArray<std::string>::Iterator it0(codigo);it0.has_curr();it0.next())
 			produccion_producto(s,anho,it0.get_curr());		
 		}
 
-		for(DynArray<Productos>::Iterator it(produccionProductos);it.has_curr();it.next())
-		{
-			it.get_curr().insumos=produccion_insumo(it.get_curr().id);
-            		it.get_curr().subue.proveedores=proveedor(it.get_curr().subue.id,anho,it0.get_curr());
-		}	
-}  
+std::string id;
+DynDlist<Insumos> ins;
+DynDlist<Proveedores> provs;
 
 
+			while(it.has_curr())
+			{
+				if(id!=it.get_curr().subue.id)
+				{
+				it.get_curr().insumos=produccion_insumo(it.get_curr().id);
+	            		it.get_curr().subue.proveedores=proveedor(it.get_curr().subue.id,anho,it.get_curr().cod_aran);
+				ins=it.get_curr().insumos;
+				provs=it.get_curr().subue.proveedores;
+				id=it.get_curr().subue.id;
+				}
+				else
+				{
+				it.get_curr().insumos=ins;
+				it.get_curr().subue.proveedores=provs;
+				}
+			it.next();
+	
+			}  
+
+
+
+}
 
 return produccionProductos;
 	
@@ -193,14 +221,14 @@ return su;
 		
 }
 
-DynArray<Insumos> DownRiver::produccion_insumo(std::string producto)
+DynDlist<Insumos> DownRiver::produccion_insumo(std::string producto)
 {
 	DBQuery f=*q;
 	std::size_t found;
 	std::string cantidad, nombre, id,anio,codigo,marca;
 	Insumos p;
 
-	DynArray<Insumos> insumoslist;	
+	DynDlist<Insumos> insumoslist;	
 
 	f.clear();
 
@@ -237,7 +265,11 @@ DynArray<Insumos> DownRiver::produccion_insumo(std::string producto)
 		p.cantidad=cantidad;
 		p.marca=marca;
 		p.anho=anio;
+		if(!filter->contains(p.nombre))
+		{
 		insumoslist.append(p);
+		filter->insert(p.nombre);
+		}
 	
 		}
 
@@ -291,17 +323,10 @@ void DownRiver::produccion_producto(SubUnidadE planta, std::string anho, std::st
 			p.anho=anio;
 			p.subue=planta;
 
-			if(!filter.contains(p.id))
-			{
 			produccionProductos.append(p);
-			filter.insert(p.id);
-			}
-			
-
 			
 			}
-	
-		
+			
 		}
 
 	
@@ -309,13 +334,13 @@ void DownRiver::produccion_producto(SubUnidadE planta, std::string anho, std::st
 }
 
 
-DynArray<Proveedores> DownRiver::proveedor(std::string search, std::string anho, std::string producto)
+DynDlist<Proveedores> DownRiver::proveedor(std::string search, std::string anho, std::string producto)
 {
 	DBQuery f=*q;
 	std::size_t found;
 	std::string id, nombre, rif, paisProcedencia, paisOrigen,anio;
 	Proveedores p;
-	DynArray<Proveedores> provlist;
+	DynDlist<Proveedores> provlist;
 
 	f.clear();
 //	query=(std::string)"SELECT produccion_insumo.id, cmproveedores_proveedor.nombre, cmproveedores_proveedor.rif, comun_pais.nombre, comun_pais.nombre, cmproveedores_proveedorinsumo.anho_r FROM cmproveedores_proveedor, comun_pais, cmproveedores_proveedorinsumo, unidadecon_subunidad_economica, produccion_insumo,produccion_producto WHERE cmproveedores_proveedor.pais_origen_id=comun_pais.id AND cmproveedores_proveedor.pais_procedencia_id = comun_pais.id AND cmproveedores_proveedor.pais_origen_id <>23 AND produccion_insumo.id= cmproveedores_proveedorinsumo.insumo_id_id AND cmproveedores_proveedorinsumo.proveedor_id_id=cmproveedores_proveedor.id AND unidadecon_subunidad_economica.id=cmproveedores_proveedor.planta_id_id AND unidadecon_subunidad_economica.id ="+"\'"+search+"\' AND produccion_producto.planta_id_id=unidadecon_subunidad_economica.id AND produccion_producto.codigo_aran_id='"+producto+"'"; // SOLO INTERNACIONALES

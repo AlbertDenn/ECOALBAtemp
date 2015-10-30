@@ -3,61 +3,45 @@
 
 #include <stdio.h>
 #include <string>
-#include <tpl_dynArray.H>
+#include <tpl_dynDlist.H>
 
 
-struct Proveedores
+struct Proveedor
 {
 	std::string insumoID, nombre, rif, paisProcedencia, paisOrigen;
+};
 
-
+struct Imported
+{
+	std::string nombre, cod_aran, id, cantidad, marca, anho;
 };
 
 
-struct UnidadEconomica
-{
-	std::string rif, nombre,razon;
+using Insumos = std::tuple<Imported,DynDlist<Proveedor>>;
 
+
+
+struct Productos
+{
+	std::string id, cod_aran, nombre, cantidad,anho,marca;
+	DynDlist<Insumos> insumos;
 };
 
 struct SubUnidadE
 {
 	std::string id, ue_rif, nombre, estado, capacidadu;
-	UnidadEconomica ue;
-	DynArray<Proveedores> proveedores;
-
-
-
 };
 
-
-struct Medida
+struct UnidadEconomica
 {
-	std::string nombre, descripcion;
+	std::string rif, nombre,razon;
+	SubUnidadE planta;
+	DynDlist<Productos> productos;
 };
 
-struct Arco
-{
-	std::string productoID, insumoID, cantidad;
-
-};
-
-struct Insumos
-{
-	std::string nombre, cod_aran, id, cantidad, marca, anho;
 
 
-};
 
-struct Productos
-{
-
-	std::string id="empty", cod_aran, nombre, cantidad,anho,marca;
-	SubUnidadE subue;
-	DynArray<Insumos> insumos;
-
-
-};
 
 
 

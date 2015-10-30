@@ -7,14 +7,13 @@ TEST DE USO DE DATOS DE BIENES Y COMPAÑIAS
 #include <stdio.h>
 #include <dbQuery.H>
 #include <string>
-#include "fetchByCode.H"
-#include "fetchByRif.H"
-#include "DownRiver.H"
+#include "fetchRoot.H"
+//#include "DownRiver.H"
 #include "bloomFilter.H"
 
-# include <tpl_dynArray.H>
-# include <tpl_agraph.H>
-#include <tpl_dynSetHash.H>
+#include <tpl_dynArray.H>
+#include <tpl_dynDlist.H>
+
 #include <stdlib.h>
 
 #include <pthread.h>
@@ -38,9 +37,9 @@ Data *d= (struct Data*) ptr;
 
 FetchByCode root("file.txt");
 
-DynArray<Productos> *P;
+DynDlist<Productos> *P;
 
-P=new DynArray<Productos>(root.search(d->rif,d->anho));
+P=new DynDlist<Productos>(root.search(d->rif,d->anho));
 
 pthread_exit((void *)P);
 
@@ -54,9 +53,9 @@ Data *d= (struct Data*) ptr;
 
 DownRiver node("file.txt");
 
-DynArray<Productos> *P;
+DynDlist<Productos> *P;
 
-P=new DynArray<Productos>(node.search(d->rif,d->anho));
+P=new DynDlist<Productos>(node.search(d->rif,d->anho));
 
 pthread_exit((void *)P);
 
@@ -65,48 +64,32 @@ pthread_exit((void *)P);
 
 */
 
+using NodeLevel = tuple<DynDlist<Productos>, size_t>;
+using Chain = DynDlist<NodeLevel>;
+
 int main(int argc, char *argv[])
 {
 
-	if(argc<3)
+	if(argc<4)
 	{
-	std::cout<<"usage: "<<"./test [RIF] [ANHO]"<<endl;
+	std::cout<<"usage: "<<"./test [RIF] [ANHO] [LEVELSDOWN]"<<endl;
 	return 0;
 	}
 
 	char* rif,*anho;
+	size_t lvldown=(size_t)atoi(argv[3]);
 	rif=argv[1];
 	anho=argv[2];
-	DynArray<Productos> raiz,nodoDown;
-
-	bloom_parameters parameters;
-	parameters.projected_element_count = 5000;
-	parameters.false_positive_probability = 0.0001; // 1 in 10000
-	parameters.compute_optimal_parameters(); 
-	bloom_filter filtro(parameters);
-
-/*
-using Net = Array_Graph<Graph_Anode<DynArray<Productos>>, Graph_Aarc<unsigned int>>;	
-DynArray<Net::Node*> nodes;
-Net red;
 	
+	DynDlist<UnidadEconomica> nodo;
 
-//SEPARAR EN HILOS DE EJECUCION DIFERENTES
-
-pthread_t thread;
-d.rif=rif;
-d.anho=anho;
-void *something;
-pthread_create(&thread,NULL, rootfind, (void*) &d);
-pthread_join(thread,&something);
-p1=(DynArray<Productos>*)something;
-*/
-
+	Chain cadena;
 
 ////////////TEST FROM HERE//////////////
 
+	FetchRoot root("file.txt");
 
-
+//	DownRiver dr("file.txt");
 	std::locale loc;
    	rif[0]=std::toupper(rif[0],loc);
 	std::string val;
@@ -114,61 +97,53 @@ p1=(DynArray<Productos>*)something;
 	if(rif[0]=='j'||rif[0]=='J')
 	{
 	std::cout<<std::endl<<"BUSQUEDA POR RIF"<<std::endl;
-	FetchByRif root("file.txt");
-	raiz=root.search(rif,anho);
-	if(raiz.size()==0)
-	std::cout<<"---SIN RESULTADO---"<<std::endl<<std::endl;
+	nodo=root.searchByRif(rif,anho);
+
+	
+		if(nodo.size()==0)
+		std::cout<<"---SIN RESULTADO---"<<std::endl<<std::endl;
+
 	}
 	else
 	{
+
 	std::cout<<std::endl<<"BUSQUEDA POR PRODUCTO"<<std::endl;
-	FetchByCode root("file.txt");
-	raiz=root.search(rif,anho);
-	if(raiz.size()==0)
-	std::cout<<"---SIN RESULTADO---"<<std::endl<<std::endl;
+	nodo=root.searchByCode(rif,anho);
+
+		if(nodo.size()==0)
+		std::cout<<"---SIN RESULTADO---"<<std::endl<<std::endl;
 	}
 	
-	if(raiz.size()!=0)
-	std::cout<<std::endl<<std::endl<<"-------------ROOT-------------"<<std::endl;
-
-
-	for(DynArray<Productos>::Iterator it(raiz);it.has_curr();it.next())
+	
+	for(DynDlist<UnidadEconomica>::Iterator it(nodo);it.has_curr();it.next())
 	{
-		std::cout<<std::endl<<it.get_curr().nombre<<" -- "<<it.get_curr().id<<" -- "<<it.get_curr().cod_aran<<" -- "<<it.get_curr().subue.ue.nombre<<std::endl;
-		filtro.insert(it.get_curr().nombre);
-	}
-
-
-	std::cout<<std::endl<<std::endl<<"----------------DOWN RIVER LEVEL ONE----------------"<<std::endl;
 	
-	
-	DownRiver dr("file.txt");
-	nodoDown=dr.search(anho,raiz,filtro);
-	
-	for(DynArray<Productos>::Iterator it(nodoDown);it.has_curr();it.next())
+	if(!it.get_curr().productos.is_empty() && !it.get_curr().productos[0].insumos.is_empty())
 	{
-		std::cout<<std::endl<<it.get_curr().nombre<<" -- "<<it.get_curr().id<<" -- "<<it.get_curr().subue.ue.nombre<<std::endl;
-		if(!filtro.contains(it.get_curr().nombre))
-		filtro.insert(it.get_curr().id);
+	std::cout<<std::endl<<"EMPRESA: "<<it.get_curr().nombre<<std::endl;
+	
+		for(DynDlist<Productos>::Iterator it1(it.get_curr().productos);it1.has_curr();it1.next())
+		{
+		  std::cout<<std::endl<<"<<PRODUCTO:"<<it1.get_curr().nombre<<" "<<it1.get_curr().cantidad<<">>"<<std::endl;
+
+			/* std::cout<<std::endl<<"Insumos del Producto:"<<std::endl;
+
+
+			 for(DynDlist<Insumos>::Iterator it2(it1.get_curr().insumos);it2.has_curr();it2.next())
+			{
+
+			  for(DynDlist<Proveedor>::Iterator it3(std::get<1>(it2.get_curr()));it3.has_curr();it3.next())
+				std::cout<<endl<<get<0>(it2.get_curr()).nombre<<" -- "<<it3.get_curr().nombre<<" "<<it3.get_curr().paisOrigen<<std::endl;
+			}*/
+
+		}
+
 	}
 
-	std::cout<<std::endl<<nodoDown.size()<<std::endl;
-	
-	std::cout<<std::endl<<std::endl<<"----------------DOWN RIVER LEVEL TWO----------------"<<std::endl;
-	
-	nodoDown=dr.search(anho,nodoDown,filtro);
-
-
-	for(DynArray<Productos>::Iterator it(nodoDown);it.has_curr();it.next())
-	{
-		std::cout<<std::endl<<it.get_curr().nombre<<" -- "<<it.get_curr().cod_aran<<" -- "<<it.get_curr().subue.ue.nombre<<std::endl;
-
 	}
-	std::cout<<std::endl<<nodoDown.size()<<std::endl;
 
-		std::cout<<std::endl<<"------------------------------------------"<<std::endl<<std::endl;
 
-return 0;
+	return 0;
 
 
 }
