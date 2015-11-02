@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 	rif=argv[1];
 	anho=argv[2];
 	
-	DynDlist<UnidadEconomica> nodo;
+	DynDlist<UnidadEconomica> nodo, down;
 
 	Chain cadena;
 
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 		std::cout<<"---SIN RESULTADO---"<<std::endl<<std::endl;
 	}
 	
-	
+
 	for(DynDlist<UnidadEconomica>::Iterator it(nodo);it.has_curr();it.next())
 	{
 	
@@ -123,26 +123,31 @@ int main(int argc, char *argv[])
 	std::cout<<std::endl<<"EMPRESA: "<<it.get_curr().nombre<<std::endl;
 	
 		for(DynDlist<Productos>::Iterator it1(it.get_curr().productos);it1.has_curr();it1.next())
-		{
-		  std::cout<<std::endl<<"<<PRODUCTO:"<<it1.get_curr().nombre<<" "<<it1.get_curr().cantidad<<">>"<<std::endl;
+		std::cout<<std::endl<<"<<PRODUCTO:"<<it1.get_curr().nombre<<" "<<it1.get_curr().cantidad<<">>"<<std::endl;
+		
 
-			/* std::cout<<std::endl<<"Insumos del Producto:"<<std::endl;
-
-
-			 for(DynDlist<Insumos>::Iterator it2(it1.get_curr().insumos);it2.has_curr();it2.next())
+			down=(DynDlist<UnidadEconomica>)it.get_curr();
+		
+			size_t i=0;
+			while(i<lvldown)
 			{
+			std::cout<<std::endl<<"DOWN RIVER LEVEL "<<i<<std::endl;
+			down=root.searchDown(down,anho);
 
-			  for(DynDlist<Proveedor>::Iterator it3(std::get<1>(it2.get_curr()));it3.has_curr();it3.next())
-				std::cout<<endl<<get<0>(it2.get_curr()).nombre<<" -- "<<it3.get_curr().nombre<<" "<<it3.get_curr().paisOrigen<<std::endl;
-			}*/
-
-		}
+			if(!down.is_empty())
+			for(DynDlist<UnidadEconomica>::Iterator it(down);it.has_curr();it.next())
+			if(!it.get_curr().productos.is_empty() && !it.get_curr().productos[0].insumos.is_empty())
+			std::cout<<std::endl<<"EMPRESA: "<<it.get_curr().nombre<<std::endl;
+			
+			i++;
+			}
 
 	}
 
 	}
 
-
+	
+	std::cout<<endl<<endl;
 	return 0;
 
 
