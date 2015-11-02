@@ -8,61 +8,11 @@ TEST DE USO DE DATOS DE BIENES Y COMPAÑIAS
 #include <dbQuery.H>
 #include <string>
 #include "fetchRoot.H"
-//#include "DownRiver.H"
 #include "bloomFilter.H"
-
-#include <tpl_dynArray.H>
 #include <tpl_dynDlist.H>
-
 #include <stdlib.h>
-
 #include <pthread.h>
-
 #include <fstream>
-
-
-
-/*
-struct Data
-{
-
-char *rif,*anho;
-
-};
-
-void* rootfind(void *ptr)
-{
-
-Data *d= (struct Data*) ptr;
-
-FetchByCode root("file.txt");
-
-DynDlist<Productos> *P;
-
-P=new DynDlist<Productos>(root.search(d->rif,d->anho));
-
-pthread_exit((void *)P);
-
-
-}
-
-void* downriverfind(void *ptr)
-{
-
-Data *d= (struct Data*) ptr;
-
-DownRiver node("file.txt");
-
-DynDlist<Productos> *P;
-
-P=new DynDlist<Productos>(node.search(d->rif,d->anho));
-
-pthread_exit((void *)P);
-
-
-}
-
-*/
 
 using NodeLevel = tuple<DynDlist<Productos>, size_t>;
 using Chain = DynDlist<NodeLevel>;
@@ -83,6 +33,8 @@ int main(int argc, char *argv[])
 	
 	DynDlist<UnidadEconomica> nodo, down;
 
+	ofstream file;
+
 	Chain cadena;
 
 ////////////TEST FROM HERE//////////////
@@ -93,6 +45,9 @@ int main(int argc, char *argv[])
 	std::locale loc;
    	rif[0]=std::toupper(rif[0],loc);
 	std::string val;
+
+	file.open("outjson.txt");
+
 
 	if(rif[0]=='j'||rif[0]=='J')
 	{
@@ -120,7 +75,7 @@ int main(int argc, char *argv[])
 	
 	if(!it.get_curr().productos.is_empty() && !it.get_curr().productos[0].insumos.is_empty())
 	{
-	std::cout<<std::endl<<"EMPRESA: "<<it.get_curr().nombre<<std::endl;
+	std::cout<<std::endl<<"------EMPRESA: "<<it.get_curr().nombre<<std::endl;
 	
 		for(DynDlist<Productos>::Iterator it1(it.get_curr().productos);it1.has_curr();it1.next())
 		std::cout<<std::endl<<"<<PRODUCTO:"<<it1.get_curr().nombre<<" "<<it1.get_curr().cantidad<<">>"<<std::endl;
@@ -131,14 +86,17 @@ int main(int argc, char *argv[])
 			size_t i=0;
 			while(i<lvldown)
 			{
-			std::cout<<std::endl<<"DOWN RIVER LEVEL "<<i<<std::endl;
-			down=root.searchDown(down,anho);
+			down=root.searchUp(down,anho);
 
-			if(!down.is_empty())
+			if(!down.is_empty() && !down[0].productos.is_empty())
+			{
+			std::cout<<std::endl<<"/ / / / UP RIVER LEVEL "<<i+1<<std::endl;
 			for(DynDlist<UnidadEconomica>::Iterator it(down);it.has_curr();it.next())
-			if(!it.get_curr().productos.is_empty() && !it.get_curr().productos[0].insumos.is_empty())
-			std::cout<<std::endl<<"EMPRESA: "<<it.get_curr().nombre<<std::endl;
-			
+			if(!it.get_curr().productos.is_empty())
+			for(DynDlist<Productos>::Iterator it5(it.get_curr().productos);it5.has_curr();it5.next())
+			std::cout<<std::endl<<"<-->EMPRESA: "<<it.get_curr().nombre<<" :: "<<it5.get_curr().nombre<<std::endl;
+			std::cout<<"--------------------"<<std::endl;
+			}
 			i++;
 			}
 
