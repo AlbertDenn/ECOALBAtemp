@@ -21,11 +21,11 @@ LIBS = -L $(ALEPH) -L $(DB) -L $(PQ)  -lAleph -lpq -lDbAccess -lnana -lc -lm \
                                      -lgsl -lgslcblas -lasprintf -lpthread -lgmp -lmpfr 
 
 
-all: test
+all: outJson
 
 clean:
-	rm -f test *.o *.csv
+	rm -f test *.o *.csv outjson.txt
 
-test:  test.C eunits.H fetchRoot.H DownRiver.H
+outJson:  outJson.C eunits.H fetchRoot.H 
 	$(CXX) $(FLAGS) $(INCLUDE) $@.C -o $@ $(LIBS)
 

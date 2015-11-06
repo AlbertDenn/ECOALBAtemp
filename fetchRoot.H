@@ -1,3 +1,29 @@
+/*
+ Copyright (C) 2015
+  Albert Cortez (acortez@cenditel.gob.ve)
+ 
+  CENDITEL Fundación Centro Nacional de Desarrollo e Investigación en
+  Tecnologías Libres
+ 
+  Este programa es software libre; Usted puede usarlo bajo los términos de la
+  licencia de software GPL versión 2.0 de la Free Software Foundation.
+ 
+  Este programa se distribuye con la esperanza de que sea útil, pero SIN
+  NINGUNA GARANTÍA; tampoco las implícitas garantías de MERCANTILIDAD o
+  ADECUACIÓN A UN PROPÓSITO PARTICULAR.
+  Consulte la licencia GPL para más detalles. Usted debe recibir una copia
+  de la GPL junto con este programa; si no, escriba a la Free Software
+  Foundation Inc. 51 Franklin Street,5 Piso, Boston, MA 02110-1301, USA.
+*/
+
+/*
+  Autor:             Argenis A. Cortez
+  Fecha de creación: 15/10/2015
+ 
+ Clase que accesa a la base de datos y extrae la informacion del producto o compañia perteneciente a la busqueda.
+*/
+
+
 # ifndef FETCHROOt_H
 # define FETCHROOt_H
 
@@ -43,11 +69,6 @@ class FetchRoot{
 	DynDlist<Productos> produccion_producto(SubUnidadE, std::string);
 	DynDlist<Insumos> produccion_insumo(std::string);
 	DynDlist <Proveedor> proveedor(std::string, std::string);
-	DynDlist <std::string> extract_codes(DynDlist<UnidadEconomica>);
-	DynDlist <std::string> extract_codes_insumos(DynDlist<UnidadEconomica>);
-	DynDlist <UnidadEconomica> searchDown(DynDlist<UnidadEconomica>,std::string);
-	DynDlist <UnidadEconomica> searchUp(DynDlist<UnidadEconomica>,std::string);
-		
 	};
 
 
@@ -71,149 +92,6 @@ FetchRoot::FetchRoot(const std::string name)
 	filter=new bloom_filter(parameters);
 
 }
-
-
-
-DynDlist<std::string> FetchRoot::extract_codes_insumos(DynDlist<UnidadEconomica> sofar)
-{
-	DynDlist<std::string> codes;
-
-	for(DynDlist<UnidadEconomica>::Iterator it(sofar);it.has_curr();it.next())
-		{ filter->insert(it.get_curr().rif);
-		for(DynDlist<Productos>::Iterator it0(it.get_curr().productos);it0.has_curr();it0.next())
-			for(DynDlist<Insumos>::Iterator it1(it0.get_curr().insumos);it1.has_curr();it1.next())
-			{
-			std::string code=std::get<0>(it1.get_curr()).cod_aran;
-			if(!filter->contains(code))
-			codes.append(code);
-		
-
-			}
-			
-			 
-		}
-return codes;
-
-}
-
-
-DynDlist<std::string> FetchRoot::extract_codes(DynDlist<UnidadEconomica> sofar)
-{
-	DynDlist<std::string> codes;
-
-	for(DynDlist<UnidadEconomica>::Iterator it(sofar);it.has_curr();it.next())
-		{ 	filter->insert(it.get_curr().rif);
-		for(DynDlist<Productos>::Iterator it0(it.get_curr().productos);it0.has_curr();it0.next())
-
-			if(!filter->contains(it0.get_curr().cod_aran))
-			 codes.append(it0.get_curr().cod_aran);
-			 
-		}
-return codes;
-
-}
-
-
-DynDlist<UnidadEconomica> FetchRoot::searchDown(DynDlist<UnidadEconomica> list, std::string anho)
-{
-	DBQuery f(connection);
-	DynDlist<UnidadEconomica> result;
-	DynDlist<std::string>codes=extract_codes(list);
-	
-	UEc.empty();
-
-	for(DynDlist<std::string>::Iterator it(codes);it.has_curr();it.next())
-	{
-	query=(std::string)"SELECT DISTINCT unidadecon_subunidad_economica.ue_rif FROM unidadecon_subunidad_economica, produccion_insumo WHERE produccion_insumo.planta_id_id=unidadecon_subunidad_economica.id AND produccion_insumo.codigo_aran_id='"+it.get_curr()+"'";
-	f.exec(query);
-	std::string val;
-	SubUnidadE s;
-	UnidadEconomica ue;
-
-			while(f.hasResult() && f.next() && !filter->contains(f.getValue(0)))
-			{
-			val=f.getValue(0);
-			s=subUnidadesEconomicas(val);
-			ue=unidades_economicas(val);
-			ue.planta=s;
-			ue.productos=produccion_producto(s,anho,it.get_curr(),1);
-			
-			std::string id;
-			DynDlist<Insumos> ins;
-			DynDlist<Proveedor> provs;
-			
-				for(DynDlist<Productos>::Iterator it0(ue.productos);it0.has_curr();it0.next())
-				{
-					if(id!=s.id)
-					{
-					it0.get_curr().insumos=produccion_insumo(it0.get_curr().id);
-					ins=it0.get_curr().insumos;
-					id=s.id;
-					}
-					else
-					it0.get_curr().insumos=ins;
-				}
-		
-			UEc.append(ue);
-			}
-		
-	}
-
-return UEc;
-
-}
-
-
-DynDlist<UnidadEconomica> FetchRoot::searchUp(DynDlist<UnidadEconomica> list, std::string anho)
-{
-	UEc.empty();
-	DBQuery f(connection);
-	DynDlist<UnidadEconomica> result;
-	DynDlist<std::string>codes=extract_codes_insumos(list);
-	
-	UEc.empty();
-
-	for(DynDlist<std::string>::Iterator it(codes);it.has_curr();it.next())
-	{
-	query=(std::string)"SELECT DISTINCT unidadecon_subunidad_economica.ue_rif FROM unidadecon_subunidad_economica, produccion_producto WHERE produccion_producto.planta_id_id=unidadecon_subunidad_economica.id AND produccion_producto.codigo_aran_id='"+it.get_curr()+"'";
-	f.exec(query);
-	std::string val;
-	SubUnidadE s;
-	UnidadEconomica ue;
-
-			while(f.hasResult() && f.next() && !filter->contains(f.getValue(0)))
-			{
-			val=f.getValue(0);
-			s=subUnidadesEconomicas(val);
-			ue=unidades_economicas(val);
-			ue.planta=s;
-			ue.productos=produccion_producto(s,anho,it.get_curr(),2);
-			
-			std::string id;
-			DynDlist<Insumos> ins;
-			DynDlist<Proveedor> provs;
-			
-				for(DynDlist<Productos>::Iterator it0(ue.productos);it0.has_curr();it0.next())
-				{
-					if(id!=s.id)
-					{
-					it0.get_curr().insumos=produccion_insumo(it0.get_curr().id);
-					ins=it0.get_curr().insumos;
-					id=s.id;
-					}
-					else
-					it0.get_curr().insumos=ins;
-				}
-		
-			UEc.append(ue);
-			}
-		
-	}
-
-return UEc;
-
-}
- 
 
 DynDlist<UnidadEconomica> FetchRoot::searchByCode(std::string rif, std::string anho)
 {
@@ -436,7 +314,6 @@ DynDlist<Productos> FetchRoot::produccion_producto(SubUnidadE planta, std::strin
 	if(y==1)
 	query=(std::string)"SELECT produccion_producto.id, produccion_producto.nombre, produccion_producto.codigo_aran_id, produccion_producto.marca, produccion_produccion_precios_r.cant_producido, produccion_produccion_precios_r.anho FROM produccion_producto, produccion_produccion_precios_r, unidadecon_subunidad_economica, produccion_insumo WHERE produccion_producto.id = produccion_produccion_precios_r.producto_id_id AND unidadecon_subunidad_economica.id  ='"+planta.id+"' AND  produccion_producto.planta_id_id=unidadecon_subunidad_economica.id AND produccion_insumo.planta_id_id=unidadecon_subunidad_economica.id AND produccion_insumo.codigo_aran_id='"+producto+"'";
 	if(y==2)
-	//query=(std::string)"SELECT produccion_producto.id, produccion_producto.nombre, produccion_producto.codigo_aran_id, produccion_producto.marca, produccion_produccion_precios_r.cant_producido, produccion_produccion_precios_r.anho FROM produccion_producto, produccion_produccion_precios_r, unidadecon_subunidad_economica, produccion_insumo WHERE produccion_producto.id = produccion_produccion_precios_r.producto_id_id AND unidadecon_subunidad_economica.id  ='"+planta.id+"' AND  produccion_producto.planta_id_id=unidadecon_subunidad_economica.id AND produccion_insumo.planta_id_id=unidadecon_subunidad_economica.id AND produccion_producto.codigo_aran_id='"+producto+"'";
 	query=(std::string)"SELECT produccion_producto.id, produccion_producto.nombre, produccion_producto.codigo_aran_id, produccion_producto.marca, produccion_produccion_precios_r.cant_producido, produccion_produccion_precios_r.anho FROM produccion_producto, produccion_produccion_precios_r, unidadecon_subunidad_economica, produccion_insumo WHERE produccion_producto.id = produccion_produccion_precios_r.producto_id_id AND  produccion_producto.planta_id_id=unidadecon_subunidad_economica.id AND produccion_insumo.planta_id_id=unidadecon_subunidad_economica.id AND produccion_producto.codigo_aran_id=produccion_insumo.codigo_aran_id AND produccion_producto.codigo_aran_id='"+producto+"'";
 	f.exec(query);
 	
@@ -555,7 +432,7 @@ DynDlist<Proveedor> FetchRoot::proveedor(std::string producto, std::string anho)
 	DynDlist<Proveedor> provlist;
 
 	f.clear();
-	query=(std::string)"SELECT DISTINCT cmproveedores_proveedor.nombre, cmproveedores_proveedor.rif, comun_pais.nombre, comun_pais.nombre, cmproveedores_proveedorinsumo.anho_r FROM cmproveedores_proveedor, comun_pais, cmproveedores_proveedorinsumo WHERE cmproveedores_proveedor.pais_origen_id=comun_pais.id AND cmproveedores_proveedor.pais_procedencia_id = comun_pais.id AND cmproveedores_proveedorinsumo.proveedor_id_id=cmproveedores_proveedor.id AND cmproveedores_proveedorinsumo.insumo_id_id='"+producto+"'"; //CON NACIONALES
+	query=(std::string)"SELECT DISTINCT cmproveedores_proveedor.nombre, cmproveedores_proveedor.rif, comun_pais.nombre, comun_pais.nombre, cmproveedores_proveedorinsumo.anho_r FROM cmproveedores_proveedor, comun_pais, cmproveedores_proveedorinsumo WHERE cmproveedores_proveedor.pais_origen_id=comun_pais.id AND cmproveedores_proveedor.pais_procedencia_id = comun_pais.id AND cmproveedores_proveedorinsumo.proveedor_id_id=cmproveedores_proveedor.id AND cmproveedores_proveedorinsumo.insumo_id_id='"+producto+"' AND cmproveedores_proveedor.pais_origen_id <>23"; //CON NACIONALES
 	f.exec(query);
 	
 	while(f.hasResult() && f.next())
