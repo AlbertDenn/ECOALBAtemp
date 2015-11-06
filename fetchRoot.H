@@ -118,16 +118,17 @@ DynDlist<UnidadEconomica> FetchRoot::searchByCode(std::string rif, std::string a
 			
 				for(DynDlist<Productos>::Iterator it(ue.productos);it.has_curr();it.next())
 				{
-					if(id!=s.id)
-					{
+					//if(id!=s.id)
+				//	{
 					it.get_curr().insumos=produccion_insumo(it.get_curr().id);
-					ins=it.get_curr().insumos;
-					id=s.id;
-					}
-					else
-					it.get_curr().insumos=ins;
+				//	ins=it.get_curr().insumos;
+				//	id=s.id;
+				//	}
+				//	else
+				//	it.get_curr().insumos=ins;
 				}
 		
+			
 			UEc.append(ue);
 			}
 
@@ -142,8 +143,11 @@ DynDlist<UnidadEconomica> FetchRoot::searchByRif(std::string rif, std::string an
 	UEc.empty();
 		SubUnidadE s;
 		UnidadEconomica ue;
-
-		s=subUnidadesEconomicas(rif);	
+		s.nombre="";
+	
+		s=subUnidadesEconomicas(rif);
+		if(s.nombre!="")
+		{	
 		ue=unidades_economicas(rif);
 		ue.productos=produccion_producto(s,anho);		
 		
@@ -164,7 +168,7 @@ DynDlist<UnidadEconomica> FetchRoot::searchByRif(std::string rif, std::string an
 				}
 		
 			UEc.append(ue);
-
+		}
 return UEc;
 }
 
@@ -218,8 +222,9 @@ SubUnidadE FetchRoot::subUnidadesEconomicas(std::string search)
 	query=(std::string)"SELECT unidadecon_subunidad_economica.id, unidadecon_subunidad_economica.nombre, unidadecon_subunidad_economica.capacidad_utilizada, comun_entidad.nombre FROM  unidadecon_subunidad_economica, comun_parroquia,comun_municipio,comun_entidad WHERE unidadecon_subunidad_economica.parroquia_codigo = comun_parroquia.codigo AND comun_parroquia.municipio_codigo=comun_municipio.codigo AND comun_municipio.entidad_codigo = comun_entidad.codigo AND unidadecon_subunidad_economica.tipo_subunidad ='Pl' AND unidadecon_subunidad_economica.ue_rif="+"\'"+search+"\'";
 	f.exec(query);
 
-	f.next();
-
+if(f.hasResult())
+{	
+f.next();
 		 id=f.getValue(0);
           	 nombre=f.getValue(1);
 		 capacidad=f.getValue(2);
@@ -237,8 +242,9 @@ SubUnidadE FetchRoot::subUnidadesEconomicas(std::string search)
 		su.nombre=nombre;
 		su.capacidadu=capacidad;
 		su.estado=entidad;
-
+}
 return su;
+
 }
 
 DynDlist<Insumos> FetchRoot::produccion_insumo(std::string producto)
@@ -287,8 +293,11 @@ DynDlist<Insumos> FetchRoot::produccion_insumo(std::string producto)
 		prov=proveedor(impo.id,anio);
 		std::get<0>(in)=impo;
 		std::get<1>(in)=prov;
-		result.append(in);		
-		filter->insert(impo.nombre);
+			if(!prov.is_empty())
+			{
+			result.append(in);		
+			filter->insert(impo.nombre);
+			}
 		}
 
 
@@ -432,7 +441,7 @@ DynDlist<Proveedor> FetchRoot::proveedor(std::string producto, std::string anho)
 	DynDlist<Proveedor> provlist;
 
 	f.clear();
-	query=(std::string)"SELECT DISTINCT cmproveedores_proveedor.nombre, cmproveedores_proveedor.rif, comun_pais.nombre, comun_pais.nombre, cmproveedores_proveedorinsumo.anho_r FROM cmproveedores_proveedor, comun_pais, cmproveedores_proveedorinsumo WHERE cmproveedores_proveedor.pais_origen_id=comun_pais.id AND cmproveedores_proveedor.pais_procedencia_id = comun_pais.id AND cmproveedores_proveedorinsumo.proveedor_id_id=cmproveedores_proveedor.id AND cmproveedores_proveedorinsumo.insumo_id_id='"+producto+"' AND cmproveedores_proveedor.pais_origen_id <>23"; //CON NACIONALES
+	query=(std::string)"SELECT cmproveedores_proveedor.nombre, cmproveedores_proveedor.rif, comun_pais.nombre, comun_pais.nombre, cmproveedores_proveedorinsumo.anho_r FROM cmproveedores_proveedor, comun_pais, cmproveedores_proveedorinsumo WHERE cmproveedores_proveedor.pais_origen_id=comun_pais.id AND cmproveedores_proveedor.pais_procedencia_id = comun_pais.id AND cmproveedores_proveedorinsumo.proveedor_id_id=cmproveedores_proveedor.id AND cmproveedores_proveedorinsumo.insumo_id_id='"+producto+"' AND cmproveedores_proveedor.pais_origen_id <>23"; //CON NACIONALES
 	f.exec(query);
 	
 	while(f.hasResult() && f.next())

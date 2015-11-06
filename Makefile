@@ -1,8 +1,8 @@
 # coloca aqui tu camino hacia aleph
 ALEPH = /home/cenditel/aleph
-DB = /home/cenditel/ECOALBA/testGood/DB
+DB = /home/cenditel/ECOALBA/chainsCreator/DB
 PQ = /usr/include/postgresql
-AL = /home/cenditel/ECOALBA/testGood
+AL = /home/cenditel/ECOALBA/chainsCreator
 
 
 CXX = /usr/bin/clang++-3.7
@@ -21,11 +21,11 @@ LIBS = -L $(ALEPH) -L $(DB) -L $(PQ)  -lAleph -lpq -lDbAccess -lnana -lc -lm \
                                      -lgsl -lgslcblas -lasprintf -lpthread -lgmp -lmpfr 
 
 
-all: outJson
+all: chainCreate
 
 clean:
 	rm -f test *.o *.csv outjson.txt
 
-outJson:  outJson.C eunits.H fetchRoot.H 
+chainCreate:  chainCreate.C eunits.H fetchRoot.H 
 	$(CXX) $(FLAGS) $(INCLUDE) $@.C -o $@ $(LIBS)
 

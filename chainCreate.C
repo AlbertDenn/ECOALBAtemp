@@ -63,11 +63,14 @@ int main(int argc, char *argv[])
 	file.open("outjson.json");
 
 
-	if(rif[0]=='j'||rif[0]=='J')
+	if(rif[0]=='J'||rif[0]=='G')
 	nodoraiz=root.searchByRif(rif,anho);
 	else
 	nodoraiz=root.searchByCode(rif,anho);
 
+
+if(!nodoraiz.is_empty())
+{
 
 	file<<"[";
 
@@ -76,22 +79,22 @@ int main(int argc, char *argv[])
 
 		if(!it.get_curr().productos.is_empty() && !it.get_curr().productos[0].insumos.is_empty())
 		{
-			file<<"{ \"roleName\":\""<<it.get_curr().nombre<<"\",\"roleId\":\""<<it.get_curr().rif<<"\",\"children\":["<<std::endl;
+			file<<"{ \"Unidad Economica\":\""<<it.get_curr().nombre<<"\",\"RIF\":\""<<it.get_curr().rif<<"\",\"children\":["<<std::endl;
 	
 			for (DynDlist<Productos>::Iterator it1(it.get_curr().productos);it1.has_curr();it1.next())
 			{
 	
-				file<<"{\"roleName\":\""<<it1.get_curr().nombre<<"\",\"roleId\":\""<<"Cantidad:"<<it1.get_curr().cantidad<<"\",\"children\":["<<std::endl;
+				file<<"{\"Producto\":\""<<it1.get_curr().nombre<<"\",\"Cantidad Producida\":\""<<it1.get_curr().cantidad<<"\",\"children\":["<<std::endl;
 						
 				for(DynDlist<Insumos>::Iterator it0(it1.get_curr().insumos);it0.has_curr();it0.next())
 				{
 	
 				
-					file<<"{\"roleName\":\""<<std::get<0>(it0.get_curr()).nombre<<"\",\"roleId\":\""<<"Cant. Importada:"<<std::get<0>(it0.get_curr()).cantidad<<"\",\"children\":["<<std::endl;
+					file<<"{\"Insumo\":\""<<std::get<0>(it0.get_curr()).nombre<<"\",\"Cantidad Requerida\":\""<<std::get<0>(it0.get_curr()).cantidad<<"\",\"children\":["<<std::endl;
 				
 					for(DynDlist<Proveedor>::Iterator it2(std::get<1>(it0.get_curr()));it2.has_curr();it2.next())
 					{
-					file<<"{\"roleName\":\""<<it2.get_curr().nombre<<"\",\"roleId\":\""<<it2.get_curr().paisProcedencia<<"\",\"children\":[]}";
+					file<<"{\"Proveedor\":\""<<it2.get_curr().nombre<<"\",\"Pais\":\""<<it2.get_curr().paisProcedencia<<"\",\"children\":[]}";
 	
 					if(it2.get_pos()!=std::get<1>(it0.get_curr()).size()-1 && std::get<1>(it0.get_curr()).size()!=1)
 					file<<","<<std::endl;
@@ -131,6 +134,10 @@ int main(int argc, char *argv[])
 	}
 	
 	file<<"]";
+}
+else
+	file<<"[[\"ERROR\"]}"<<std::endl;
+	std::cout<<"NOT FOUND"<<std::endl;
 	file.close();
 	std::cout<<std::endl<<std::endl;
 	return 0;
