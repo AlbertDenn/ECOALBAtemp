@@ -103,6 +103,7 @@ DynDlist<UnidadEconomica> FetchRoot::searchByCode(std::string rif, std::string a
 	SubUnidadE s;
 	UnidadEconomica ue;
 
+
 			while(f.hasResult() && f.next())
 			{
 			val=f.getValue(0);
@@ -111,7 +112,6 @@ DynDlist<UnidadEconomica> FetchRoot::searchByCode(std::string rif, std::string a
 			ue.planta=s;
 			ue.productos=produccion_producto(s,anho,rif,0);
 			
-
 			std::string id;
 			DynDlist<Insumos> ins;
 			DynDlist<Proveedor> provs;
@@ -145,10 +145,14 @@ DynDlist<UnidadEconomica> FetchRoot::searchByRif(std::string rif, std::string an
 		UnidadEconomica ue;
 		s.nombre="";
 	
+		ue=unidades_economicas(rif);
 		s=subUnidadesEconomicas(rif);
+	
+		std::cout<<std::endl<<rif<<" "<<ue.nombre<<std::endl;
+		ue=unidades_economicas(rif);
+
 		if(s.nombre!="")
 		{	
-		ue=unidades_economicas(rif);
 		ue.productos=produccion_producto(s,anho);		
 		
 		std::string id;
