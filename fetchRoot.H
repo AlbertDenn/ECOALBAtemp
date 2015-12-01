@@ -118,14 +118,7 @@ DynDlist<UnidadEconomica> FetchRoot::searchByCode(std::string rif, std::string a
 			
 				for(DynDlist<Productos>::Iterator it(ue.productos);it.has_curr();it.next())
 				{
-					//if(id!=s.id)
-				//	{
 					it.get_curr().insumos=produccion_insumo(it.get_curr().id);
-				//	ins=it.get_curr().insumos;
-				//	id=s.id;
-				//	}
-				//	else
-				//	it.get_curr().insumos=ins;
 				}
 		
 			
@@ -163,7 +156,7 @@ DynDlist<UnidadEconomica> FetchRoot::searchByRif(std::string rif, std::string an
 				{
 					if(id!=s.id)
 					{
-					it1.get_curr().insumos=produccion_insumo(it1.get_curr().id);
+					it1.get_curr().insumos=produccion_insumo(it1.get_curr().id); 
 					ins=it1.get_curr().insumos;
 					id=s.id;
 					}
@@ -265,7 +258,7 @@ DynDlist<Insumos> FetchRoot::produccion_insumo(std::string producto)
 
 
 	f.clear();
-	query=(std::string)"SELECT DISTINCT produccion_insumo.id, produccion_insumo.nombre, produccion_insumo.codigo_aran_id, produccion_insumo.marca, produccion_consumo_precios_r.cant_comp_imp, produccion_consumo_precios_r.anho FROM produccion_insumo, produccion_consumo_precios_r, produccion_producto_t_insumo, cmproveedores_proveedorinsumo, cmproveedores_proveedor WHERE produccion_insumo.id=produccion_consumo_precios_r.insumo_id_id AND produccion_insumo.id=produccion_producto_t_insumo.insumo_id_id AND produccion_producto_t_insumo.producto_id_id='"+producto+"' AND produccion_insumo.id=cmproveedores_proveedorinsumo.insumo_id_id AND cmproveedores_proveedor.id= cmproveedores_proveedorinsumo.proveedor_id_id AND cmproveedores_proveedor.pais_origen_id <> 23";
+	query=(std::string)"SELECT produccion_insumo.id, produccion_insumo.nombre, produccion_insumo.codigo_aran_id, produccion_insumo.marca, produccion_consumo_precios_r.cant_comp_imp, produccion_consumo_precios_r.anho FROM produccion_insumo, produccion_consumo_precios_r, produccion_producto_t_insumo, cmproveedores_proveedorinsumo, cmproveedores_proveedor WHERE produccion_insumo.id=produccion_consumo_precios_r.insumo_id_id AND produccion_insumo.id=produccion_producto_t_insumo.insumo_id_id AND produccion_producto_t_insumo.producto_id_id='"+producto+"' AND produccion_insumo.id=cmproveedores_proveedorinsumo.insumo_id_id AND cmproveedores_proveedor.id= cmproveedores_proveedorinsumo.proveedor_id_id AND cmproveedores_proveedor.pais_origen_id <> 23";
 	f.exec(query);
 	
 		while(f.hasResult() && f.next())

@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 	rif=argv[1];
 	anho=argv[2];
 
-	DynDlist<UnidadEconomica> nodoraiz;
+	DynDlist<UnidadEconomica> nodoraiz, nodofiltrado;
 
 	std::ofstream file;
 
@@ -60,7 +60,8 @@ int main(int argc, char *argv[])
 	std::locale loc;
    	rif[0]=std::toupper(rif[0],loc);
 	std::string val;
-	file.open("out.json");
+//	file.open("out.json");
+	file.open("media/tmp/out.json");
 
 
 	if(rif[0]=='J'||rif[0]=='G')
@@ -71,11 +72,37 @@ int main(int argc, char *argv[])
 
 	file<<"{\t \"Raiz\":\t[";
 
-	for(DynDlist<UnidadEconomica>::Iterator it(nodoraiz);it.has_curr();)
+
+	//ELIMINAR NODOS QUE NO TENGAN DATOS PARA MODELAR EN CADENA
+	size_t i;
+	for(DynDlist<UnidadEconomica>::Iterator it(nodoraiz);it.has_curr();it.next())
+		{i=0;
+			if(!it.get_curr().productos.is_empty())
+			{
+			  for(DynDlist<Productos>::Iterator itpr(it.get_curr().productos);itpr.has_curr();itpr.next())
+				if(itpr.get_curr().insumos.is_empty())
+				{
+					swap(itpr.get_curr(),it.get_curr().productos[i]);
+					i++;
+				}
+
+				for(int n=0;n<i;n++)
+				it.get_curr().productos.pop();
+
+			if(!it.get_curr().productos.is_empty())
+			nodofiltrado.append(it.get_curr());
+
+
+			}
+		}
+		
+
+
+	//PARSER MANUAL A FORMATO JSON
+
+	for(DynDlist<UnidadEconomica>::Iterator it(nodofiltrado);it.has_curr();)
 	{
 
-		if(!it.get_curr().productos.is_empty() && !it.get_curr().productos[0].insumos.is_empty())
-		{
 			file<<"{ \"roleName\":\""<<it.get_curr().nombre+" "+it.get_curr().rif<<"\",\"roleId\":\""<<it.get_curr().rif<<"\",\"children\":["<<std::endl;
 
 			for (DynDlist<Productos>::Iterator it1(it.get_curr().productos);it1.has_curr();it1.next())
@@ -85,11 +112,11 @@ int main(int argc, char *argv[])
 				for(DynDlist<Insumos>::Iterator it0(it1.get_curr().insumos);it0.has_curr();it0.next())
 				{
 
-				file<<"{\"roleName\":\""<<std::get<0>(it0.get_curr()).nombre+" "+std::get<0>(it0.get_curr()).cod_aran<<"\",\"roleId\":\""<<std::get<0>(it0.get_curr()).id<<"\",\"children\":["<<std::endl;
+				file<<"{\"roleName\":\""<<std::get<0>(it0.get_curr()).nombre+" "+std::get<0>(it0.get_curr()).cod_aran<<"\",\"roleId\":\""<<std::get<0>(it0.get_curr()).cantidad<<"\",\"children\":["<<std::endl;
 
 					for(DynDlist<Proveedor>::Iterator it2(std::get<1>(it0.get_curr()));it2.has_curr();it2.next())
 					{
-					file<<"{\"roleName\":\""<<it2.get_curr().nombre+" "+it2.get_curr().paisProcedencia<<"\",\"roleId\":\""<<it2.get_curr().paisOrigen<<"\",\"children\":[]}";
+					file<<"{\"roleName\":\""<<it2.get_curr().nombre+" "+it2.get_curr().paisProcedencia<<"\",\"roleId\":\""<<it2.get_curr().rif<<"\",\"children\":[]}";
 
 					if(it2.get_pos()!=std::get<1>(it0.get_curr()).size()-1 && std::get<1>(it0.get_curr()).size()!=1)
 					file<<","<<std::endl;
@@ -109,24 +136,20 @@ int main(int argc, char *argv[])
 
 			}
 
-			if(it.get_pos()!=nodoraiz.size()-1)
+			if(it.get_pos()!=nodofiltrado.size()-1)
 			file<<"]},"<<std::endl;
 			else
 			file<<"]}"<<std::endl;
-	
+
 			it.next();
 
-		}
-		else
-		it.next();
-	
 
 
 	}
 	
 	file<<"]}";
 	file.close();
-	std::cout<<std::endl<<"DONE BABY!"<<std::endl;
+	std::cout<<std::endl<<"DONE!!"<<std::endl;
 	return 0;
 
 
